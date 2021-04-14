@@ -1,5 +1,5 @@
 {
-  "name": "@modules/resolve",
+  "name": "@webmodule/resolve",
   "version": "1.0.2",
   "description": "Resolve path of es, browser, node modules",
   "main": "index.js",
