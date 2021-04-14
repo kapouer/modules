@@ -1,3 +1,5 @@
+#!/usr/bin/node
+
 const dash = require('dashdash');
 
 const parser = dash.createParser({
@@ -34,7 +36,7 @@ try {
 }
 
 if (opts.help) {
-	const help = parser.help({includeEnv: true}).trimRight();
+	const help = parser.help({ includeEnv: true }).trimRight();
 	console.log(`usage: webmodule-serve [opts]\n${help}`);
 	process.exit(0);
 }
@@ -47,6 +49,6 @@ const prefix = '/' + (opts.prefix || 'node_modules');
 
 app.get(prefix + '/*', serveModule(prefix, opts.node_path || "node_modules"));
 
-app.listen(opts.port);
-
-
+const server = app.listen(opts.port, () => {
+	console.info(`http://localhost:${server.address().port}`);
+});
