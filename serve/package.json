@@ -1,0 +1,47 @@
+{
+  "name": "@webmodule/serve",
+  "version": "1.4.3",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "bin": {
+    "webmodule-serve": "bin/serve.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kapouer/webmodule.git"
+  },
+  "author": "Jérémy Lal <kapouer@melix.org>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kapouer/webmodule/issues"
+  },
+  "homepage": "https://github.com/kapouer/webmodule#readme",
+  "dependencies": {
+    "acorn": "^8.0.4",
+    "acorn-class-fields": "^0.3.7",
+    "acorn-private-methods": "^0.3.3",
+    "acorn-walk": "^8.0.0",
+    "dashdash": "^2.0.0",
+    "express": "^4.17.1",
+    "http-errors": "^1.7.2",
+    "resolve": "^1.19.0",
+    "@webmodule/resolve": "^1.0.2"
+  },
+  "devDependencies": {
+    "@kapouer/eslint-config": "^1.2.1",
+    "got": "^11.8.2",
+    "mocha": "^8.3.2"
+  },
+  "eslintConfig": {
+    "extends": "@kapouer/eslint-config",
+    "env": {
+      "mocha": true
+    }
+  },
+  "mocha": {
+    "spec": "test/*.js"
+  }
+}

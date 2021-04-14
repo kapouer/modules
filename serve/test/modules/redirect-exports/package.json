@@ -1,0 +1,7 @@
+{
+  "name": "redirect-exports",
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json"
+  }
+}

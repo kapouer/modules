@@ -1,0 +1,4 @@
+{
+	"name": "redirect-loop",
+	"main": "ui/widget.js"
+}
