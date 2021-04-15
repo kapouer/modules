@@ -1,6 +1,6 @@
 {
   "name": "@webmodule/serve",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/kapouer/webmodule#readme",
   "dependencies": {
-    "@webmodule/resolve": "^1.0.2",
+    "@webmodule/resolve": "^1.1.0",
     "acorn": "^8.0.4",
     "acorn-class-fields": "^0.3.7",
     "acorn-private-methods": "^0.3.3",
