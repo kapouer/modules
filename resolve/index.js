@@ -24,6 +24,7 @@ module.exports = class Resolver {
 			}
 			const paths = exportedPaths(pkg, type);
 			const exp = paths["."];
+			if (typeof exp != "string") return { url };
 
 			const objExp = Path.parse(exp);
 			mod = modules[moduleName] = {
