@@ -619,7 +619,7 @@ function rollupModulesResolverCreate({ modules, root }) {
 					Path.join(Path.dirname(importer), source)
 				)
 			);
-			const res = resolver.resolve(browserPath);
+			const res = resolver.resolve(browserPath, "js");
 			return res.path;
 		}
 	};
@@ -642,7 +642,7 @@ function cssModulesPrefix({ modules, root }) {
 					Path.join(basedir, source)
 				)
 			);
-			const res = resolver.resolve(browserPath);
+			const res = resolver.resolve(browserPath, "css");
 			return Path.resolve(res.path);
 		}
 	};

@@ -27,7 +27,9 @@ function rollupModulesPrefix(root) {
 }
 ```
 
-* resolver.resolve(path)
+* resolver.resolve(path, accepts)
   returns a {path, url, redir} object.
   The path is a file system path.
+  accepts can be "js", "css"...
+  If it is "css", package.json "style" field is privileged.
   If redir is true, one can use url to redirect a client to the correct url.

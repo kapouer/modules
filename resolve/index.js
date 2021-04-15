@@ -8,7 +8,7 @@ module.exports = class Resolver {
 		this.mount = prefix;
 		this.modules = {};
 	}
-	resolve(url) {
+	resolve(url, type) {
 		const { node_path, mount, modules } = this;
 		url = url.substring(mount.length);
 		const [moduleName, rest] = pathInfo(url);
@@ -22,7 +22,7 @@ module.exports = class Resolver {
 			} catch (ex) {
 				return { url };
 			}
-			const paths = exportedPaths(pkg);
+			const paths = exportedPaths(pkg, type);
 			const exp = paths["."];
 
 			const objExp = Path.parse(exp);
@@ -69,9 +69,11 @@ function pathInfo(reqPath) {
 	return [name, list.join('/')];
 }
 
-function exportedPaths(pkg) {
+function exportedPaths(pkg, type) {
 	const paths = {};
-	if (pkg.exports) {
+	if (type == "css" && pkg.style) {
+		paths["."] = pkg.style;
+	} else if (pkg.exports) {
 		for (let key in pkg.exports) {
 			const exp = pkg.exports[key];
 			if (key == "import") {

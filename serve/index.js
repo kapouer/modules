@@ -31,6 +31,7 @@ module.exports = function(prefix, node_modules = "node_modules") {
 		if (req.app.settings.env != "development") {
 			throw new HttpError.Unauthorized(prefix + " is only served in development environment");
 		}
+
 		const ext = path.extname(req.path);
 		const ref = req.headers['referer'] || "";
 		if (ext && /^\.m?js$/.test(ext) && /\.m?js$/.test(ref)) {
@@ -41,10 +42,19 @@ module.exports = function(prefix, node_modules = "node_modules") {
 			}
 			return;
 		}
-		const { redir, url } = resolver.resolve(req.path);
+		const accepts = /\btext\/css\b/.test(req.get('accept') || "*/*") ? "css" : "js";
 
+		const { redir, url } = resolver.resolve(req.path, accepts);
 		if (redir) {
-			res.redirect(url);
+			if (accepts == "css") {
+				// redirect sets text/plain :(
+				res.location(url);
+				res.status(302);
+				res.type('text/css');
+				res.end();
+			} else {
+				res.redirect(url);
+			}
 		} else {
 			req.url = url;
 			serveHandler(req, res, next);

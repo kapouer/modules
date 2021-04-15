@@ -26,7 +26,8 @@ describe("test suite", function () {
 		const res = await got(host + '/modules/redirect-main', {
 			followRedirect: false,
 			headers: {
-				referer: "/mymodule.js"
+				referer: "/mymodule.js",
+				accept: "*/*"
 			}
 		});
 		assert.strictEqual(
@@ -39,7 +40,8 @@ describe("test suite", function () {
 		const res = await got(host + '/modules/redirect-exports', {
 			followRedirect: false,
 			headers: {
-				referer: "/mymodule.js"
+				referer: "/mymodule.js",
+				accept: "*/*"
 			}
 		});
 		assert.strictEqual(
@@ -51,7 +53,8 @@ describe("test suite", function () {
 	it('should reexport global module', async function () {
 		const res = await got(host + '/modules/reexport/index.js', {
 			headers: {
-				referer: "/mymodule.js"
+				referer: "/mymodule.js",
+				accept: "*/*"
 			}
 		});
 		assert.ok(res.body.startsWith("const module = {exports: {}};const exports = module.exports;"));
@@ -60,7 +63,8 @@ describe("test suite", function () {
 	it('should not reexport global module', async function () {
 		const res = await got(host + '/modules/noreexport/index.js', {
 			headers: {
-				referer: "/mymodule.js"
+				referer: "/mymodule.js",
+				accept: "*/*"
 			}
 		});
 		assert.ok(!res.body.startsWith("const module = {exports: {}};const exports = module.exports;"));
@@ -69,7 +73,8 @@ describe("test suite", function () {
 	it('should leave file untouched', async function () {
 		const res = await got(host + '/modules/reexport/index.js', {
 			headers: {
-				referer: "/myfile"
+				referer: "/myfile",
+				accept: "*/*"
 			}
 		});
 		assert.ok(!res.body.startsWith("const module = {exports: {}};const exports = module.exports;"));
@@ -78,9 +83,37 @@ describe("test suite", function () {
 	it('should redirect in subdir without loop', async function () {
 		const res = await got(host + '/modules/redirect-loop', {
 			headers: {
-				referer: "/myfile"
+				referer: "/myfile",
+				accept: "*/*"
 			}
 		});
 		assert.ok(res.body.includes("default toto"));
+	});
+
+	it('should support style for css', async function () {
+		const res = await got(host + '/modules/style', {
+			headers: {
+				referer: "/myfile",
+				accept: "text/css,*/*;q=0.1"
+			}
+		});
+		assert.ok(res.body.includes("animation"));
+	});
+
+	it('should return 404 when there is not module', async function () {
+		assert.strictEqual(await got(host + '/modules/inexistent', {
+			headers: {
+				referer: "/myfile"
+			}
+		}).catch(err => err.response.statusCode), 404);
+	});
+
+	it('should return 404 when module has nothing to export', async function () {
+		assert.strictEqual(await got(host + '/modules/nothing', {
+			headers: {
+				referer: "/myfile",
+				accept: "text/css,*/*;q=0.1"
+			}
+		}).catch(err => err.response.statusCode), 404);
 	});
 });
