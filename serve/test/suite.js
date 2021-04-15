@@ -1,6 +1,6 @@
 const assert = require('assert');
 const express = require('express');
-const got = require('got');
+const got = require('got').extend({ retry: 0 });
 
 const serveModule = require('..');
 
