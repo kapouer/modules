@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "serve"
+		},
+		{
+			"path": "resolve"
+		},
+		{
+			"path": "bundle"
+		}
+	]
+}
