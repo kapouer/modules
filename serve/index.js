@@ -16,6 +16,7 @@ module.exports = function(prefix, node_modules = "node_modules") {
 		dotfiles: 'ignore',
 		fallthrough: false
 	});
+	if (!prefix.startsWith('/')) prefix = '/' + prefix;
 
 	const moduleServer = new ModuleServer({
 		root: node_path,

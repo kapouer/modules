@@ -100,6 +100,16 @@ describe("test suite", function () {
 		assert.ok(res.body.includes("animation"));
 	});
 
+	it('should support style for css in a subdir next to it', async function () {
+		const res = await got(host + '/modules/style/asset/file.txt', {
+			headers: {
+				referer: "/modules/style/css/index.css",
+				accept: "text/css,*/*;q=0.1"
+			}
+		});
+		assert.ok(res.body.includes("some text"));
+	});
+
 	it('should return 404 when there is not module', async function () {
 		assert.strictEqual(await got(host + '/modules/inexistent', {
 			headers: {
