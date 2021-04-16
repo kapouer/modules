@@ -243,6 +243,7 @@ describe("test suite", function () {
 			node_path: "test/modules"
 		}).then(function (data) {
 			data.stylesheets.should.eql(['modules/style']);
+			data.css.should.containEql("color: red");
 			data.css.should.containEql("-webkit-animation-duration: 12ms");
 		});
 	});
