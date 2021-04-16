@@ -3,13 +3,14 @@ const { readFileSync } = require('fs');
 const unwin = Path.sep == "\\" ? s => s.replace(/\\/g, "/") : s => s;
 
 module.exports = class Resolver {
-	constructor({ node_path, prefix }) {
+	constructor({ node_path = "node_modules", prefix = "/node_modules" }) {
 		this.node_path = node_path;
 		this.mount = prefix;
 		this.modules = {};
 	}
 	resolve(url, type) {
 		const { node_path, mount, modules } = this;
+		if (!url.startsWith(mount)) return { url };
 		url = url.substring(mount.length);
 		const [moduleName, rest] = pathInfo(url);
 		let mod = modules[moduleName];
@@ -40,15 +41,13 @@ module.exports = class Resolver {
 		if (restBase == "" || restBase == ".") {
 			restBase = mod.base;
 		} else if (!objRest.ext) {
-			restBase += ".js";
+			restBase += "." + type;
 		} else {
 			redir = false;
 		}
-		let restDir = objRest.dir;
-		if (!restDir.startsWith(mod.dir) && objRest.ext != ".css") {
-			restDir = mod.dir + '/' + objRest.dir;
-			redir = true;
-		}
+
+		const restDir = objRest.dir || mod.dir;
+		if (!objRest.dir && mod.dir) redir = true;
 		let path;
 		if (redir) {
 			path = Path.join(moduleName, restDir, restBase);
