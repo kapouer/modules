@@ -13,13 +13,13 @@ const Resolver = require('@webmodule/resolve');
 function rollupModulesPrefix(root) {
  if (!root) return;
  const resolver = new Resolver({
-  node_path: 'node_modules',
+  node_path: 'node_modules', // this is the default
   prefix: root
  });
  return {
   name: "modulesPrefix",
   async resolveId(source, importer) {
-   if (!source.startsWith(root)) return null;
+   if (!source.startsWith(root)) return null; //
    const obj = resolver.resolve(source, importer);
    return obj.path;
   }
@@ -27,9 +27,11 @@ function rollupModulesPrefix(root) {
 }
 ```
 
-* resolver.resolve(path, accepts)
+see @webmodules/bundle for a more complete example.
+
+* resolver.resolve(path, type)
   returns a {path, url, redir} object.
   The path is a file system path.
-  accepts can be "js", "css"...
+  The type is "js" or "css".
   If it is "css", package.json "style" field is privileged.
   If redir is true, one can use url to redirect a client to the correct url.
