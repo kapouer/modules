@@ -254,7 +254,7 @@ function processScripts(doc, opts, data) {
 	const entries = [];
 	const legacies = [];
 
-	const rollupModulesResolver = rollupModulesResolverCreate(opts);
+	const modulesResolver = resolverPlugin(opts, "resolveId", "js");
 
 
 	allScripts.forEach(function (node, i) {
@@ -282,13 +282,11 @@ function processScripts(doc, opts, data) {
 				legacies.push(got((src.startsWith('//') ? "https:" : "") + src).then(function (response) {
 					return response.body.toString();
 				}));
-			} else if (rollupModulesResolver) {
+			} else if (modulesResolver) {
 				const level = Path.relative(opts.basepath, opts.root);
-				legacies.push(rollupModulesResolver.resolveId(Path.join(level, src), opts.basepath).then(solved => {
-					if (!solved) solved = path;
-					data.scripts.push(Path.relative(opts.root, solved));
-					return readFile(solved);
-				}));
+				const solved = modulesResolver.resolveId(Path.join(level, src), opts.basepath) || path;
+				data.scripts.push(Path.relative(opts.root, solved));
+				legacies.push(readFile(solved));
 			} else {
 				data.scripts.push(path);
 				legacies.push(readFile(path));
@@ -330,7 +328,7 @@ function processScripts(doc, opts, data) {
 			context: 'window',
 			plugins: [
 				rollupVirtual(virtuals),
-				rollupModulesResolver,
+				modulesResolver,
 				rollupResolve.nodeResolve({ browser: true }),
 				rollupCommonjs(),
 				rollupBabel.babel(opts.babel),
@@ -401,6 +399,8 @@ function processStylesheets(doc, opts, data) {
 			} else {
 				if (src.startsWith('/')) {
 					src = Path.relative(docRoot, Path.join(opts.root, src));
+				} else if (!src.startsWith('.')) {
+					src = "./" + src;
 				}
 				return `@import url("${src}");`;
 			}
@@ -424,7 +424,7 @@ function processStylesheets(doc, opts, data) {
 		const plugins = [
 			postcssImport(Object.assign({
 				plugins: [postcssUrl({ url: postcssRebase })],
-			}, cssModulesPrefix(opts))),
+			}, resolverPlugin(opts, "resolve", "css"))),
 			postcssUrl({ url: postcssRebase }),
 			postcssFlexBugs,
 			postcssAspectRatio()
@@ -600,50 +600,38 @@ function writeFile(path, data) {
 		}).catch(reject);
 	});
 }
-
-function rollupModulesResolverCreate({ modules, root }) {
+function resolverPlugin({ modules, node_path, root }, key, type) {
 	if (!modules) return;
+	if (!modules.startsWith('/')) modules = '/' + modules;
 	const resolver = new Resolver({
-		node_path: 'node_modules',
+		node_path,
 		prefix: modules
 	});
 	const absRoot = Path.resolve(root);
+	const regModules = new RegExp("^[\\.\\/]*" + modules + "\\/");
 	return {
-		name: "modulesPrefix",
-		async resolveId(source, importer) {
-			if (/^[\.\/]*modules\//.test(source) == false) return null;
+		name: "native import modules resolver",
+		[key](source, importer) {
+			if (source.includes('\0') || importer.includes('\0') || importer.includes("/node_modules/") || regModules.test(source) == false) {
+				// let other resolvers work
+				if (type == "js") {
+					return null;
+				} else if (type == "css") {
+					return source;
+				}
+			}
+			const importerDir = Path.extname(importer) ? Path.dirname(importer) : importer;
 			const browserPath = Path.join(
 				'/',
 				Path.relative(
 					absRoot,
-					Path.join(Path.dirname(importer), source)
+					Path.join(importerDir, source)
 				)
 			);
-			const res = resolver.resolve(browserPath, "js");
-			return res.path;
-		}
-	};
-}
-
-function cssModulesPrefix({ modules, root }) {
-	if (!modules) return;
-	const resolver = new Resolver({
-		node_path: 'node_modules',
-		prefix: modules
-	});
-	const absRoot = Path.resolve(root);
-	return {
-		resolve(source, basedir) {
-			if (/^[\.\/]*modules\//.test(source) == false) return source;
-			const browserPath = Path.join(
-				'/',
-				Path.relative(
-					absRoot,
-					Path.join(basedir, source)
-				)
-			);
-			const res = resolver.resolve(browserPath, "css");
+			const res = resolver.resolve(browserPath, type);
+			if (!res.path) throw new Error(`Cannot resolve ${source} from ${modules}`);
 			return Path.resolve(res.path);
 		}
 	};
 }
+
