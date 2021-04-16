@@ -78,14 +78,18 @@ describe("test suite", function () {
 
 	it('should support es modules with browser prefix resolver', function () {
 		return bundledom('test/fixtures/esm-browser.html', {
-			modules: '/modules',
+			modules: 'modules',
+			node_path: "test/modules",
 			exclude: [],
 			concatenate: true
 		}).then(function (data) {
-			data.scripts.should.eql(['mod-browser.js', '../../node_modules/@ungap/promise-all-settled/esm/index.js']);
+			data.scripts.should.eql([
+				'mod-browser.js',
+				'../modules/redirect-exports/src/index.js'
+			]);
 			data.should.have.property('js');
 			data.js.trim().should.startWith('(function (');
-			data.js.includes('Promise.allSettled').should.be.true();
+			data.js.includes('var test = 1;').should.be.true();
 			data.should.have.property('html');
 		});
 	});
@@ -94,10 +98,15 @@ describe("test suite", function () {
 		return bundledom('test/fixtures/legacy.html', {
 			root: "test/fixtures",
 			modules: '/modules',
+			node_path: "test/modules",
 			exclude: [],
 			concatenate: true
 		}).then(function (data) {
-			data.scripts.should.eql(['mod.js', '../../node_modules/@ungap/promise-all-settled/esm/index.js', 'depmod.js']);
+			data.scripts.sort().should.eql([
+				'../modules/redirect-exports/src/index.js',
+				'mod.js',
+				'depmod.js'
+			].sort());
 			data.should.have.property('js');
 		});
 	});
@@ -223,6 +232,18 @@ describe("test suite", function () {
 					return resolve();
 				});
 			});
+		});
+	});
+
+	it('should bundle stylesheet from a module', function () {
+		this.timeout(10000);
+		return bundledom('test/fixtures/style.html', {
+			concatenate: true,
+			modules: "modules",
+			node_path: "test/modules"
+		}).then(function (data) {
+			data.stylesheets.should.eql(['modules/style']);
+			data.css.should.containEql("-webkit-animation-duration: 12ms");
 		});
 	});
 

@@ -1,2 +1,2 @@
-import allSettled from '/modules/@ungap/promise-all-settled';
-allSettled.call(Promise, []);
+import { test } from '/modules/redirect-exports';
+window.test = test;

@@ -1,0 +1,5 @@
+@import "../asset/file.css";
+
+body {
+	animation-duration: 12ms;
+}
