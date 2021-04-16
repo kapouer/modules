@@ -47,7 +47,7 @@ const serveModule = require('..');
 
 const prefix = '/' + (opts.prefix || 'node_modules');
 
-app.get(prefix + '/*', serveModule(prefix, opts.node_path || "node_modules"));
+app.get(prefix + '/*', serveModule(prefix, opts.node_path));
 
 const server = app.listen(opts.port, () => {
 	console.info(`http://localhost:${server.address().port}`);
