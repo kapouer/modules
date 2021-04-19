@@ -426,10 +426,10 @@ function processStylesheets(doc, opts, data) {
 
 		const plugins = [
 			postcssImport(Object.assign({
-				plugins: [postcssUrl({ url: postcssRebase })],
+				plugins: [postcssUrl({ url: postcssRebaseImport })],
 			}, resolverPlugin(opts, "resolve", "css"))),
-			postcssUrl({ url: postcssRebase }),
-			postcssFlexBugs,
+			postcssUrl({ url: postcssRebaseUrl }),
+			postcssFlexBugs
 		];
 		if (opts.minify) {
 			plugins.push(cssnano({
@@ -454,7 +454,12 @@ function processStylesheets(doc, opts, data) {
 	});
 }
 
-function postcssRebase(asset) {
+function postcssRebaseImport(asset, sources, opts, decl) {
+	if (!asset.pathname) return;
+	return asset.relativePath;
+}
+
+function postcssRebaseUrl(asset, sources, opts, decl, an, to) {
 	if (!asset.pathname) return;
 	return asset.relativePath;
 }
