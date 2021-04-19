@@ -1,1 +1,0 @@
-window.toto = 1;

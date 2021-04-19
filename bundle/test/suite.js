@@ -257,12 +257,12 @@ describe("test suite", function () {
 		});
 	});
 
-	it('should resolve symlinked modules', function () {
-		return bundledom('test/fixtures/symlinked.html', {
+	it('should resolve org modules', function () {
+		return bundledom('test/fixtures/orgmodule.html', {
 			concatenate: true,
 			modulesRoot: "test"
 		}).then(function (data) {
-			data.js.should.containEql("window.toto = 1");
+			data.js.should.containEql("window.test = 1");
 		});
 	});
 
