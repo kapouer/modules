@@ -464,12 +464,12 @@ function processStylesheets(doc, opts, data) {
 
 function postcssRebaseImport(asset, sources, opts, decl) {
 	if (!asset.pathname) return;
-	return asset.relativePath;
+	return Path.toUnix(asset.relativePath);
 }
 
 function postcssRebaseUrl(asset, sources, opts, decl, an, to) {
 	if (!asset.pathname) return;
-	return asset.relativePath;
+	return Path.toUnix(asset.relativePath);
 }
 
 function getRelativePath(basepath, path) {
@@ -627,7 +627,11 @@ function resolverPlugin({ modulesPrefix = "/", modulesRoot = ".", root = "." }, 
 		name: "native import modules resolver",
 		async [key](source, importer) {
 			const usource = Path.toUnix(source);
-			if (source.includes('\0') || importer.includes('\0') || importer.includes("/node_modules/") || regModules.test(usource) == false) {
+			const importerDir = Path.relative(
+				absRoot,
+				Path.extname(importer) ? Path.dirname(importer) : importer
+			);
+			if (source.includes('\0') || importer.includes('\0') || importerDir.includes("/node_modules/") || regModules.test(usource) == false) {
 				// let other resolvers work
 				if (type == "js") {
 					return null;
@@ -635,14 +639,9 @@ function resolverPlugin({ modulesPrefix = "/", modulesRoot = ".", root = "." }, 
 					return usource;
 				}
 			}
-			const importerDir = Path.extname(importer) ? Path.dirname(importer) : importer;
-			const browserPath = usource.startsWith(modulesPrefix) ? usource : Path.join(
-				'/',
-				Path.relative(
-					absRoot,
-					Path.join(importerDir, usource)
-				)
-			);
+			const browserPath = usource.startsWith(modulesPrefix)
+				? usource
+				: Path.join('/', importerDir, usource);
 			const res = await resolver.resolve(browserPath, type);
 			if (!res.path) throw new Error(`Cannot resolve ${source} from ${modulesPrefix}`);
 			return Path.resolve(res.path);
