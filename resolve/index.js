@@ -25,6 +25,7 @@ module.exports = class Resolver {
 		if (!mod.exports) return ret;
 		const relKey = relUrl ? "./" + relUrl : ".";
 		let relPath = mod.exports[relKey] || relKey;
+		if (relPath == ".") relPath = "./index"; // last chance
 		if (!upath.extname(relPath)) {
 			relPath += `.${type}`;
 		}
