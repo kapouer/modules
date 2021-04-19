@@ -39,7 +39,7 @@ describe("test suite", function () {
 			data.should.have.property('html');
 		}).finally(() => {
 			delete process.env.BROWSERSLIST;
-		})
+		});
 	});
 
 	it('should concat js for legacy scripts', function () {
@@ -78,14 +78,14 @@ describe("test suite", function () {
 
 	it('should support es modules with browser prefix resolver', function () {
 		return bundledom('test/fixtures/esm-browser.html', {
-			modules: 'modules',
-			node_path: "test/modules",
+			modulesPrefix: '/',
+			modulesRoot: "test",
 			exclude: [],
 			concatenate: true
 		}).then(function (data) {
 			data.scripts.should.eql([
 				'mod-browser.js',
-				'../modules/redirect-exports/src/index.js'
+				'../node_modules/redirect-exports/src/index.js'
 			]);
 			data.should.have.property('js');
 			data.js.trim().should.startWith('(function (');
@@ -97,13 +97,13 @@ describe("test suite", function () {
 	it('should support legacy-resolved modules', function () {
 		return bundledom('test/fixtures/legacy.html', {
 			root: "test/fixtures",
-			modules: '/modules',
-			node_path: "test/modules",
+			modulesPrefix: '/',
+			modulesRoot: "test",
 			exclude: [],
 			concatenate: true
 		}).then(function (data) {
 			data.scripts.sort().should.eql([
-				'../modules/redirect-exports/src/index.js',
+				'../node_modules/redirect-exports/src/index.js',
 				'mod.js',
 				'depmod.js'
 			].sort());
@@ -235,15 +235,15 @@ describe("test suite", function () {
 		});
 	});
 
-	it('should bundle stylesheet from a module', function () {
+	it('should bundle stylesheet from a module and url to non css files alone', function () {
 		this.timeout(10000);
 		return bundledom('test/fixtures/style.html', {
 			concatenate: true,
-			modules: "modules",
-			node_path: "test/modules"
+			modulesPrefix: "/",
+			modulesRoot: "test"
 		}).then(function (data) {
-			data.stylesheets.should.eql(['modules/style']);
-			data.css.should.containEql("color: red");
+			data.stylesheets.should.eql(['node_modules/style']);
+			data.css.should.containEql("url('../node_modules/style/fonts/test.ttf')");
 			data.css.should.containEql("-webkit-animation-duration: 12ms");
 		});
 	});
@@ -254,6 +254,15 @@ describe("test suite", function () {
 		}).then(function (data) {
 			data.js.should.containEql("window.$ = jQuery");
 			data.js.should.containEql("window.$()");
+		});
+	});
+
+	it('should resolve symlinked modules', function () {
+		return bundledom('test/fixtures/symlinked.html', {
+			concatenate: true,
+			modulesRoot: "test"
+		}).then(function (data) {
+			data.js.should.containEql("window.toto = 1");
 		});
 	});
 
