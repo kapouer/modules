@@ -242,6 +242,7 @@ describe("test suite", function () {
 			modulesPrefix: "/",
 			modulesRoot: "test"
 		}).then(function (data) {
+			data.assets.should.eql(['../node_modules/style/fonts/test.ttf']);
 			data.stylesheets.should.eql(['node_modules/style']);
 			data.css.should.containEql("url('../node_modules/style/fonts/test.ttf')");
 			data.css.should.containEql("-webkit-animation-duration: 12ms");

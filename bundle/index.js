@@ -92,10 +92,12 @@ function bundledom(path, opts, cb) {
 			} else {
 				const cssPath = getRelativePath(opts.basepath, opts.css);
 				return writeFile(cssPath, data.css).then(function () {
+					// eslint-disable-next-line no-console
 					if (opts.cli) console.warn(opts.css);
 					if (data.cssmap) {
 						const cssMapPath = cssPath + '.map';
 						return writeFile(cssMapPath, data.cssmap).then(function () {
+							// eslint-disable-next-line no-console
 							if (opts.cli) console.warn(opts.css + ".map");
 						});
 					}
@@ -108,6 +110,7 @@ function bundledom(path, opts, cb) {
 				p = p.then(function () {
 					const htmlPath = getRelativePath(opts.basepath, opts.html);
 					return writeFile(htmlPath, html).then(function () {
+						// eslint-disable-next-line no-console
 						if (opts.cli) console.warn(opts.html);
 					});
 				});
@@ -118,10 +121,12 @@ function bundledom(path, opts, cb) {
 				p = p.then(function () {
 					const jsPath = getRelativePath(opts.basepath, opts.js);
 					return writeFile(jsPath, data.js).then(function () {
+						// eslint-disable-next-line no-console
 						if (opts.cli) console.warn(opts.js);
 						if (data.jsmap) {
 							const jsMapPath = jsPath + '.map';
 							return writeFile(jsMapPath, data.jsmap).then(function () {
+								// eslint-disable-next-line no-console
 								if (opts.cli) console.warn(opts.js + ".map");
 							});
 						}
@@ -143,6 +148,7 @@ function processDocument(doc, opts, data) {
 		imports: [],
 		scripts: [],
 		stylesheets: [],
+		assets: [],
 		jsmap: "",
 		cssmap: ""
 	});
@@ -426,17 +432,31 @@ function processStylesheets(doc, opts, data) {
 			return node.textContent;
 		}
 	})).then(function (all) {
-		const data = all.filter(function (str) {
+		const blob = all.filter(function (str) {
 			return !!str;
 		}).join("\n");
-		if (!data) return {};
+		if (!blob) return {};
 		const autoprefixerOpts = {};
 
 		const plugins = [
 			postcssImport(Object.assign({
-				plugins: [postcssUrl({ url: postcssRebaseImport })],
+				plugins: [postcssUrl({
+					url: (asset) => {
+						if (asset.pathname) {
+							return Path.toUnix(asset.relativePath);
+						}
+					}
+				})],
 			}, resolverPlugin(opts, "resolve", "css"))),
-			postcssUrl({ url: postcssRebaseUrl }),
+			postcssUrl({
+				url: (asset) => {
+					if (asset.pathname) {
+						const relPath = Path.toUnix(asset.relativePath);
+						if (!data.assets.includes(relPath)) data.assets.push(relPath);
+						return relPath;
+					}
+				}
+			}),
 			postcssFlexBugs
 		];
 		if (opts.minify) {
@@ -452,7 +472,7 @@ function processStylesheets(doc, opts, data) {
 			plugins.push(autoprefixer(autoprefixerOpts));
 		}
 		plugins.push(reporter);
-		return postcss(plugins).process(data, {
+		return postcss(plugins).process(blob, {
 			from: path,
 			to: path + '.css',
 			map: {
@@ -462,15 +482,6 @@ function processStylesheets(doc, opts, data) {
 	});
 }
 
-function postcssRebaseImport(asset, sources, opts, decl) {
-	if (!asset.pathname) return;
-	return Path.toUnix(asset.relativePath);
-}
-
-function postcssRebaseUrl(asset, sources, opts, decl, an, to) {
-	if (!asset.pathname) return;
-	return Path.toUnix(asset.relativePath);
-}
 
 function getRelativePath(basepath, path) {
 	const dir = Path.dirname(basepath);
@@ -552,6 +563,7 @@ function prependToPivot(scripts, list, tag, att, ext, attrs) {
 	if (!list.length) return;
 	const pivot = scripts[0];
 	if (!pivot) {
+		// eslint-disable-next-line no-console
 		console.error("Missing node to prepend to", list);
 		return;
 	}
@@ -568,6 +580,7 @@ function appendToPivot(scripts, list, tag, att, ext, attrs) {
 	if (!list.length) return;
 	const pivot = scripts.slice(-1)[0];
 	if (!pivot) {
+		// eslint-disable-next-line no-console
 		console.error("Missing node to append to", list);
 		return;
 	}
