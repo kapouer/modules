@@ -11,7 +11,7 @@ describe("test suite", function () {
 	before(function (done) {
 		const app = express();
 
-		app.get('/modules/*', serveModule('/modules', "test/modules"));
+		app.use(serveModule({ prefix: '/', root: "test" }));
 
 		server = app.listen(() => {
 			host = `http://localhost:${server.address().port}`;
@@ -23,7 +23,7 @@ describe("test suite", function () {
 	});
 
 	it('should redirect module with main field', async function () {
-		const res = await got(host + '/modules/redirect-main', {
+		const res = await got(host + '/node_modules/redirect-main', {
 			followRedirect: false,
 			headers: {
 				referer: "/mymodule.js",
@@ -32,12 +32,12 @@ describe("test suite", function () {
 		});
 		assert.strictEqual(
 			res.headers.location,
-			"/modules/redirect-main/here/index.js"
+			"/node_modules/redirect-main/here/index.js"
 		);
 	});
 
 	it('should redirect module with exports field', async function () {
-		const res = await got(host + '/modules/redirect-exports', {
+		const res = await got(host + '/node_modules/redirect-exports', {
 			followRedirect: false,
 			headers: {
 				referer: "/mymodule.js",
@@ -46,12 +46,12 @@ describe("test suite", function () {
 		});
 		assert.strictEqual(
 			res.headers.location,
-			"/modules/redirect-exports/src/index.js"
+			"/node_modules/redirect-exports/src/index.js"
 		);
 	});
 
 	it('should reexport global module', async function () {
-		const res = await got(host + '/modules/reexport/index.js', {
+		const res = await got(host + '/node_modules/reexport/index.js', {
 			headers: {
 				referer: "/mymodule.js",
 				accept: "*/*"
@@ -61,7 +61,7 @@ describe("test suite", function () {
 	});
 
 	it('should not reexport global module', async function () {
-		const res = await got(host + '/modules/noreexport/index.js', {
+		const res = await got(host + '/node_modules/noreexport/index.js', {
 			headers: {
 				referer: "/mymodule.js",
 				accept: "*/*"
@@ -70,8 +70,8 @@ describe("test suite", function () {
 		assert.ok(!res.body.startsWith("const module = {exports: {}};const exports = module.exports;"));
 	});
 
-	it('should leave file untouched', async function () {
-		const res = await got(host + '/modules/reexport/index.js', {
+	it('should leave file untouched because referer is not js', async function () {
+		const res = await got(host + '/node_modules/reexport/index.js', {
 			headers: {
 				referer: "/myfile",
 				accept: "*/*"
@@ -81,7 +81,7 @@ describe("test suite", function () {
 	});
 
 	it('should redirect in subdir without loop', async function () {
-		const res = await got(host + '/modules/redirect-loop', {
+		const res = await got(host + '/node_modules/redirect-loop', {
 			headers: {
 				referer: "/myfile",
 				accept: "*/*"
@@ -91,7 +91,7 @@ describe("test suite", function () {
 	});
 
 	it('should support style for css', async function () {
-		const res = await got(host + '/modules/style', {
+		const res = await got(host + '/node_modules/style', {
 			headers: {
 				referer: "/myfile",
 				accept: "text/css,*/*;q=0.1"
@@ -101,9 +101,9 @@ describe("test suite", function () {
 	});
 
 	it('should support style for css in a subdir next to it', async function () {
-		const res = await got(host + '/modules/style/asset/file.txt', {
+		const res = await got(host + '/node_modules/style/asset/file.txt', {
 			headers: {
-				referer: "/modules/style/css/index.css",
+				referer: "/node_modules/style/css/index.css",
 				accept: "text/css,*/*;q=0.1"
 			}
 		});
@@ -111,7 +111,7 @@ describe("test suite", function () {
 	});
 
 	it('should return 404 when there is not module', async function () {
-		assert.strictEqual(await got(host + '/modules/inexistent', {
+		assert.strictEqual(await got(host + '/node_modules/inexistent', {
 			headers: {
 				referer: "/myfile"
 			}
@@ -119,7 +119,7 @@ describe("test suite", function () {
 	});
 
 	it('should return 404 when module has nothing to export', async function () {
-		assert.strictEqual(await got(host + '/modules/nothing', {
+		assert.strictEqual(await got(host + '/node_modules/nothing', {
 			headers: {
 				referer: "/myfile",
 				accept: "text/css,*/*;q=0.1"
