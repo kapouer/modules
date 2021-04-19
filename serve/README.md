@@ -4,13 +4,13 @@
 Make this works with the help of an express middleware:
 
 ```js
-import MyClass from "/modules/name";
+import MyClass from "/node_modules/name";
 ```
 
 or
 
 ```css
-@import "/modules/name";
+@import "/node_modules/name";
 ```
 
 Usage
@@ -18,7 +18,7 @@ Usage
 
 ```js
 const serveModule = require("@webmodule/serve");
-app.get("/modules/*", serveModule("modules"));
+app.use(serveModule({prefix: "/", root: "."}));
 ```
 
 Limitations
