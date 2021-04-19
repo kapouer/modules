@@ -1,0 +1,1 @@
+window.toto = 1;
