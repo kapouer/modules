@@ -328,7 +328,7 @@ function processScripts(doc, opts, data) {
 		const bundle = entries.map(function (entry) {
 			const path = entry.path || entry.name;
 			if (entry.data) virtuals[entry.name] = entry.data;
-			return `import "${path.replace(/\\/g, '/')}";`
+			return `import "${path.replace(/\\/g, '/')}";`;
 		}).join('\n');
 		const bundleName = '__entry__.js';
 		virtuals[bundleName] = dataList.join('\n') + bundle;
