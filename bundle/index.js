@@ -3,7 +3,6 @@ const debug = require('debug')('@webmodule/bundle');
 const postcss = require('postcss');
 const postcssUrl = require('postcss-url');
 const postcssImport = require('postcss-import');
-const postcssAspectRatio = require('postcss-aspect-ratio-polyfill');
 const postcssFlexBugs = require('postcss-flexbugs-fixes');
 const presetEnv = require.resolve('@babel/preset-env');
 const autoprefixer = require('autoprefixer');
@@ -427,7 +426,6 @@ function processStylesheets(doc, opts, data) {
 			}, resolverPlugin(opts, "resolve", "css"))),
 			postcssUrl({ url: postcssRebase }),
 			postcssFlexBugs,
-			postcssAspectRatio()
 		];
 		if (opts.minify) {
 			plugins.push(cssnano({
