@@ -30,6 +30,8 @@ const coreJsRe = /\/core-js\//;
 
 module.exports = bundledom;
 
+/* global document */
+
 function bundledom(path, opts, cb) {
 	opts = Object.assign({
 		remotes: [],
@@ -81,6 +83,7 @@ function bundledom(path, opts, cb) {
 				if (data.css) data.js += '\n(' + function () {
 					const sheet = document.createElement('style');
 					sheet.type = 'text/css';
+					// eslint-disable-next-line no-undef
 					sheet.textContent = CSS;
 					document.head.appendChild(sheet);
 				}.toString().replace('CSS', function () {
@@ -217,10 +220,11 @@ function prepareImports(doc, opts, data) {
 						// IE < 10 fallback
 						document._currentScript.ownerDocument.body.innerHTML = html;
 					}
-					SCRIPT
+					// eslint-disable-next-line no-undef
+					SCRIPT;
 					document._currentScript.ownerDocument = document._currentScript.parentOwner;
 					delete document._currentScript.parentOwner;
-				}.toString().replace("SCRIPT", function () {
+				}.toString().replace("SCRIPT;", function () {
 					return data.js;
 				});
 				iscript = '\n(' + iscript + ')(' +
