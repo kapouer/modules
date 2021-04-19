@@ -20,7 +20,7 @@ const mkdirp = require('mkdirp');
 const MaxWorkers = Math.min(require('os').cpus().length - 1, 4);
 
 const fs = require('fs');
-const Path = require('path');
+const Path = require('upath');
 const URL = require('url');
 const got = require('got');
 
