@@ -29,9 +29,13 @@ function rollupModulesPrefix(root) {
 
 see @webmodules/bundle for a more complete example.
 
-* resolver.resolve(path, type)
-  returns a {path, url, redir} object.
-  The path is a file system path.
+* new Resolver({prefix = "/", root = "."})
+  Resolves url starting with `${prefix}node_modules/`,
+  search for modules in `${root}/node_modules`.
+
+* resolver.resolve(url, type)
+  returns a { path, url } object.
+  The url is a url pathname.
   The type is "js" or "css".
   If it is "css", package.json "style" field is privileged.
-  If redir is true, one can use url to redirect a client to the correct url.
+  Returns a file path, and a url to redirect to (when needed).

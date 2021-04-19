@@ -1,97 +1,74 @@
-const Path = require('path');
-const { readFileSync } = require('fs');
-const unwin = Path.sep == "\\" ? s => s.replace(/\\/g, "/") : s => s;
+const { readFile } = require('fs').promises;
+const upath = require('upath');
 
 module.exports = class Resolver {
-	constructor({ node_path = "node_modules", prefix = "/node_modules" }) {
-		this.node_path = node_path;
-		this.mount = prefix;
+	constructor({ prefix = "/", root = "." }) {
 		this.modules = {};
+		this.root = upath.resolve(root, "node_modules");
+		this.prefix = prefix + "node_modules/";
 	}
-	resolve(url, type) {
-		const { node_path, mount, modules } = this;
-		if (!url.startsWith(mount)) return { url };
-		url = url.substring(mount.length);
-		const [moduleName, rest] = pathInfo(url);
+	async resolve(url, type) {
+		const { modules, prefix, root } = this;
+		const ret = {};
+		if (!url.startsWith(prefix)) return ret;
+		url = url.substring(prefix.length);
+		let [moduleName, relUrl] = urlParts(url);
+		if (!moduleName) return ret;
 		let mod = modules[moduleName];
 
 		if (!mod) {
-			const modulePath = Path.join(node_path, moduleName);
-			let pkg;
-			try {
-				pkg = JSON.parse(readFileSync(Path.join(modulePath, 'package.json')));
-			} catch (ex) {
-				return { url };
-			}
-			const paths = exportedPaths(pkg, type);
-			const exp = paths["."];
-			if (typeof exp != "string") return { url };
-
-			const objExp = Path.parse(exp);
-			mod = modules[moduleName] = {
-				dir: objExp.dir,
-				base: objExp.base,
-				name: moduleName
-			};
+			let dir = upath.join(root, moduleName);
+			if (!dir) return ret;
+			const exports = await pkgExports(dir, type);
+			mod = modules[moduleName] = { exports, dir };
+		}
+		if (!mod.exports) return ret;
+		const relKey = relUrl ? "./" + relUrl : ".";
+		let relPath = mod.exports[relKey] || relKey;
+		if (!upath.extname(relPath)) {
+			relPath += `.${type}`;
 		}
 
-		const objRest = Path.parse('./' + rest);
-		let redir = true;
-		let restBase = objRest.base;
-		if (restBase == "" || restBase == ".") {
-			restBase = mod.base;
-		} else if (!objRest.ext) {
-			restBase += "." + type;
-		} else {
-			redir = false;
-		}
-
-		const restDir = objRest.dir || mod.dir;
-		if (!objRest.dir && mod.dir) redir = true;
-		let path;
-		if (redir) {
-			path = Path.join(moduleName, restDir, restBase);
-			url = unwin(Path.join(mount, path));
-			path = Path.join(node_path, path);
-		} else {
-			url = '/' + unwin(Path.join(mod.name, rest));
-			path = Path.join(node_path, url);
-		}
-		return { redir, url, path };
+		const newUrl = upath.join(moduleName, relPath);
+		ret.path = upath.join(mod.dir, relPath);
+		if (url != newUrl) ret.url = this.prefix + newUrl;
+		return ret;
 	}
 };
 
-function pathInfo(reqPath) {
-	const list = reqPath.substr(1).split('/');
+function urlParts(url) {
+	const list = url.split('/');
 	if (!list.length) return [null, null];
 	let name = list.shift();
 	if (name.charAt(0) == "@") name += "/" + list.shift();
 	return [name, list.join('/')];
 }
 
-function exportedPaths(pkg, type) {
-	const paths = {};
+async function pkgExports(dir, type) {
+	const exports = {};
+	let pkg;
+	try {
+		pkg = JSON.parse(await readFile(upath.join(dir, 'package.json')));
+	} catch (err) {
+		return null;
+	}
 	if (type == "css" && pkg.style) {
-		paths["."] = pkg.style;
+		exports["."] = pkg.style;
 	} else if (pkg.exports) {
 		for (let key in pkg.exports) {
 			const exp = pkg.exports[key];
 			if (key == "import") {
-				paths['.'] = exp;
+				exports['.'] = exp;
 			} else if (key.startsWith(".")) {
 				if (typeof exp == "object" && exp.import) {
-					paths[key] = exp.import;
+					exports[key] = exp.import;
 				} else {
-					paths[key] = exp;
+					exports[key] = exp;
 				}
 			}
 		}
 	} else {
-		let fallback = pkg.module || pkg['jsnext:main'] || pkg.main;
-		if (fallback) {
-			if (!fallback.startsWith('.')) fallback = './' + fallback;
-			paths["."] = fallback;
-		}
+		exports["."] = pkg.module || pkg['jsnext:main'] || pkg.main || null;
 	}
-	return paths;
+	return exports;
 }
