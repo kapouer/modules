@@ -21,4 +21,13 @@
     "url": "https://github.com/kapouer/webmodule/issues"
   },
   "homepage": "https://github.com/kapouer/webmodule#readme"
+  "eslintConfig": {
+    "extends": "@kapouer/eslint-config",
+    "env": {
+      "mocha": true
+    }
+  },
+  "devDependencies": {
+    "@kapouer/eslint-config": "^1.2.1"
+  }
 }
