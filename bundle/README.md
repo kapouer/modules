@@ -98,8 +98,8 @@ and `opts` has these properties:
 * root: absolute mount path, defaults to current directory
 * custom: function(dom, opts, data) {} returning a promise
 * remotes: list of allowed remote domains to download from
-* modules: the mount path for resolving node_modules (/modules/xxx becomes node_modules/xxx/index.js), defaults to "/node_modules".
-* node_path: where node modules are to be found. Defaults to "node_modules".
+* modulesPrefix: the mount path for resolving node_modules (<modules> becomes <modules>/node_modules/xxx/index.js), defaults to "/".
+* modulesRoot: where node modules are to be found. Defaults to ".".
 
 Strings are matched simply by searching a substring.
 

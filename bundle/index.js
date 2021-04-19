@@ -66,6 +66,7 @@ function bundledom(path, opts, cb) {
 		babelHelpers: 'bundled',
 		comments: minify === false,
 		filter(id) {
+			if (id.includes("\\")) throw new Error("Fixme filter(id) gets windows paths: " + id);
 			if (coreJsRe.test(id)) return false;
 			if (id.startsWith('\0') && !id.startsWith('\0virtual:')) return false;
 			return true;
@@ -286,10 +287,16 @@ function processScripts(doc, opts, data) {
 					return response.body.toString();
 				}));
 			} else if (modulesResolver) {
-				const level = Path.relative(opts.basepath, opts.root);
-				const solved = modulesResolver.resolveId(Path.join(level, src), opts.basepath) || path;
-				data.scripts.push(Path.relative(opts.root, solved));
-				legacies.push(readFile(solved));
+				// TODO docRoot ou opts.basepath ?
+				const level = Path.relative(docRoot, opts.root);
+
+				legacies.push(
+					Promise.resolve().then(async () => {
+						const solved = await modulesResolver.resolveId(Path.join(level, src), docRoot) || path;
+						data.scripts.push(Path.relative(opts.root, solved));
+						return readFile(solved);
+					})
+				);
 			} else {
 				data.scripts.push(path);
 				legacies.push(readFile(path));
@@ -607,36 +614,36 @@ function writeFile(path, data) {
 		}).catch(reject);
 	});
 }
-function resolverPlugin({ modules, node_path, root }, key, type) {
-	if (!modules) return;
-	if (!modules.startsWith('/')) modules = '/' + modules;
+function resolverPlugin({ modulesPrefix = "/", modulesRoot = ".", root = "." }, key, type) {
+	if (!modulesPrefix.startsWith('/')) modulesPrefix = '/' + modulesPrefix;
 	const resolver = new Resolver({
-		node_path,
-		prefix: modules
+		root: modulesRoot,
+		prefix: modulesPrefix
 	});
 	const absRoot = Path.resolve(root);
-	const regModules = new RegExp("^[\\.\\/]*" + modules + "\\/");
+	const regModules = /^[./]*node_modules\//;
 	return {
 		name: "native import modules resolver",
-		[key](source, importer) {
-			if (source.includes('\0') || importer.includes('\0') || importer.includes("/node_modules/") || regModules.test(source) == false) {
+		async [key](source, importer) {
+			const usource = Path.toUnix(source);
+			if (source.includes('\0') || importer.includes('\0') || importer.includes("/node_modules/") || regModules.test(usource) == false) {
 				// let other resolvers work
 				if (type == "js") {
 					return null;
 				} else if (type == "css") {
-					return source;
+					return usource;
 				}
 			}
 			const importerDir = Path.extname(importer) ? Path.dirname(importer) : importer;
-			const browserPath = Path.join(
+			const browserPath = usource.startsWith(modulesPrefix) ? usource : Path.join(
 				'/',
 				Path.relative(
 					absRoot,
-					Path.join(importerDir, source)
+					Path.join(importerDir, usource)
 				)
 			);
-			const res = resolver.resolve(browserPath, type);
-			if (!res.path) throw new Error(`Cannot resolve ${source} from ${modules}`);
+			const res = await resolver.resolve(browserPath, type);
+			if (!res.path) throw new Error(`Cannot resolve ${source} from ${modulesPrefix}`);
 			return Path.resolve(res.path);
 		}
 	};

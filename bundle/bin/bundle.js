@@ -64,9 +64,14 @@ const parser = dash.createParser({options: [
 		help: 'root directory instead of dirname(html file path)'
 	},
 	{
-		names: ['modules'],
+		names: ['modulesPrefix'],
 		type: 'string',
-		help: 'prefix for resolving es, cjs, or node modules'
+		help: 'prefix for node_modules, defaults to /'
+	},
+	{
+		names: ['modulesRoot'],
+		type: 'string',
+		help: 'root for node_modules, defaults to .'
 	}
 ]});
 
