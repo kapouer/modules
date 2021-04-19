@@ -1,6 +1,6 @@
-const Path = require("path");
+const { dirname, relative, join, resolve } = require("upath");
 const fs = require("fs");
-const resolve = require("resolve");
+const nodeResolve = require("resolve");
 const crypto = require("crypto");
 const { Parser } = require("acorn");
 const MyParser = Parser
@@ -20,23 +20,15 @@ class Cached {
 }
 
 class ModuleServer {
-	constructor(options) {
-		this.root = unwin(options.root);
-		this.maxDepth = options.maxDepth == null ? 1 : options.maxDepth;
-		this.prefix = options.prefix || "_m";
-		this.prefixTest = new RegExp(`^/${this.prefix}/(.*)`);
-		if (this.root.charAt(this.root.length - 1) != "/") this.root += "/";
-		// Maps from paths (relative to root dir) to cache entries
+	constructor({ prefix = "/", root = ".", maxDepth }) {
+		this.maxDepth = maxDepth == null ? 1 : maxDepth;
+		this.prefix = join(prefix, "node_modules", "/");
+		this.root = resolve(root, "node_modules");
 		this.cache = Object.create(null);
-		this.handleRequest = this.handleRequest.bind(this);
 	}
 
 	handleRequest(req, res) {
-		let url = new URL(req.url, "http://localhost");
-		let handle = this.prefixTest.exec(url.pathname);
-		if (!handle) return false;
-
-		let send = (status, text, headers) => {
+		const send = (status, text, headers) => {
 			let hds = {};
 			if (!headers || typeof headers == "string") {
 				hds["content-type"] = headers || "text/plain";
@@ -46,17 +38,18 @@ class ModuleServer {
 			res.writeHead(status, hds);
 			res.end(text);
 		};
-
+		let url = new URL(req.baseUrl + req.url, "http://localhost");
+		if (url.pathname.startsWith(this.prefix) == false) return false;
 		// Modules paths in URLs represent "up one directory" as "__".
 		// Convert them to ".." for filesystem path resolution.
-		let path = undash(handle[1]);
-		let cached = this.cache[path];
+		const relUrl = undash(url.pathname.substring(this.prefix.length));
+		let cached = this.cache[relUrl];
 		if (!cached) {
-			if (countParentRefs(path) > this.maxDepth) {
+			if (countParentRefs(relUrl) > this.maxDepth) {
 				send(403, "Access denied");
 				return true;
 			}
-			let fullPath = unwin(Path.resolve(this.root, path));
+			let fullPath = resolve(this.root, relUrl);
 			let code;
 			try {
 				code = fs.readFileSync(fullPath, "utf8");
@@ -65,17 +58,18 @@ class ModuleServer {
 				return true;
 			}
 			if (/\.map$/.test(fullPath)) {
-				cached = this.cache[path] = new Cached(code, "application/json");
+				cached = this.cache[relUrl] = new Cached(code, "application/json");
 			} else {
 				let { code: resolvedCode, error } = this.resolveImports(fullPath, code);
 				if (error) throw error;
-				cached = this.cache[path] = new Cached(resolvedCode, "application/javascript");
+				cached = this.cache[relUrl] = new Cached(resolvedCode, "application/javascript");
 			}
 			// Drop cache entry when the file changes.
 			let watching = fs.watch(fullPath, () => {
 				watching.close();
-				this.cache[path] = null;
+				this.cache[relUrl] = null;
 			});
+			// let node exit
 			watching.unref();
 		}
 		let noneMatch = req.headers["if-none-match"];
@@ -101,7 +95,7 @@ class ModuleServer {
 			catch (e) { return { error: e.toString() }; }
 		}
 
-		return { path: "/" + this.prefix + "/" + unwin(Path.relative(this.root, resolved)) };
+		return { path: join("/", this.prefix, relative(this.root, resolved)) };
 	}
 
 	resolveImports(basePath, code) {
@@ -119,7 +113,7 @@ class ModuleServer {
 			isModule = true;
 			if (!node.source) return;
 			let orig = (0, eval)(code.slice(node.source.start, node.source.end));
-			let { error, path } = this.resolveModule(Path.dirname(basePath), orig);
+			let { error, path } = this.resolveModule(dirname(basePath), orig);
 			if (error) return { error };
 			patches.push({
 				from: node.source.start,
@@ -137,7 +131,7 @@ class ModuleServer {
 				isModule = true;
 				if (node.source.type == "Literal") {
 					let { error, path } = this.resolveModule(
-						Path.dirname(basePath), node.source.value
+						dirname(basePath), node.source.value
 					);
 					if (!error) {
 						patches.push({
@@ -168,7 +162,7 @@ class ModuleServer {
 						continue; // ? anyway we don't wan't to crash on this ?
 					}
 					const { error, path } = this.resolveModule(
-						Path.dirname(basePath),
+						dirname(basePath),
 						args.value
 					);
 					if (error) return { error };
@@ -194,7 +188,8 @@ class ModuleServer {
 			}
 		}, {
 			...walk.base,
-			FieldDefinition: () => { }
+			FieldDefinition: () => { },
+			PropertyDefinition: () => { }
 		});
 		if (!isModule && isCommonjs) {
 			patches.push({
@@ -221,8 +216,6 @@ module.exports = ModuleServer;
 function dash(path) { return path.replace(/(^|\/)\.\.(?=$|\/)/g, "$1__"); }
 function undash(path) { return path.replace(/(^|\/)__(?=$|\/)/g, "$1.."); }
 
-const unwin = Path.sep == "\\" ? s => s.replace(/\\/g, "/") : s => s;
-
 function packageFilter(pkg) {
 	if (pkg.module) pkg.main = pkg.module;
 	else if (pkg.jnext) pkg.main = pkg.jsnext;
@@ -230,7 +223,7 @@ function packageFilter(pkg) {
 }
 
 function resolveMod(path, base) {
-	return resolve.sync(path, { basedir: base, packageFilter });
+	return nodeResolve.sync(path, { basedir: base, packageFilter });
 }
 
 function hash(str) {

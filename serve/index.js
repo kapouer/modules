@@ -4,38 +4,31 @@ const Resolver = require('@webmodule/resolve');
 const ModuleServer = require("./server");
 const HttpError = require('http-errors');
 
-/* ES Modules path resolution for browsers */
-/* uses fields in package.json (exports,module,jsnext:main,main) */
-/* mount is the base path, and it needs a whitelist of modules names */
-
-module.exports = function(prefix, node_modules = "node_modules") {
-	const node_path = path.join('.', node_modules);
-	const serveHandler = serveStatic(path.resolve(node_path), {
+module.exports = function ({ prefix = "/", root = "." } = {}) {
+	const serveHandler = serveStatic(root, {
 		index: false,
 		redirect: false,
 		dotfiles: 'ignore',
 		fallthrough: false
 	});
-	if (!prefix.startsWith('/')) prefix = '/' + prefix;
+	const reqPrefix = path.join(prefix, "node_modules", "/");
+	const moduleServer = new ModuleServer({ prefix, root });
+	const resolver = new Resolver({ prefix, root });
 
-	const moduleServer = new ModuleServer({
-		root: node_path,
-		prefix: prefix.substring(1)
-	});
-
-	const resolver = new Resolver({ node_path, prefix });
-
-	return function serveModule(req, res, next) {
-		if (!req.path.startsWith(prefix + '/')) {
+	return async function serveModule(req, res, next) {
+		const reqPath = req.baseUrl + req.path;
+		if (req.method != "GET" || !reqPath.startsWith(reqPrefix)) {
 			return next('route');
 		}
-		if (req.app.settings.env != "development") {
-			throw new HttpError.Unauthorized(prefix + " is only served in development environment");
-		}
+		const isNotDev = req.app.settings.env != "development";
 
-		const ext = path.extname(req.path);
+		const ext = path.extname(reqPath).substring(1);
+
 		const ref = req.headers['referer'] || "";
-		if (ext && /^\.m?js$/.test(ext) && /\.m?js$/.test(ref)) {
+		if (ext && /^m?js$/.test(ext) && /\.m?js$/.test(ref)) {
+			if (isNotDev) {
+				return next(new HttpError.Unauthorized(`${reqPrefix} allows js files only for development`));
+			}
 			try {
 				if (!moduleServer.handleRequest(req, res)) res.sendStatus(404);
 			} catch (err) {
@@ -43,12 +36,13 @@ module.exports = function(prefix, node_modules = "node_modules") {
 			}
 			return;
 		}
-		const accepts = /\btext\/css\b/.test(req.get('accept') || "*/*") ? "css" : "js";
 
-		const { redir, url } = resolver.resolve(req.path, accepts);
-		if (redir) {
+		const accepts = /\btext\/css\b/.test(req.get('accept') || "*/*") ? "css" : "js";
+		const { url } = await resolver.resolve(reqPath, accepts);
+
+		if (url) {
 			if (accepts == "css") {
-				// redirect sets text/plain :(
+				// else browser warns about content-type
 				res.location(url);
 				res.status(302);
 				res.type('text/css');
@@ -57,7 +51,7 @@ module.exports = function(prefix, node_modules = "node_modules") {
 				res.redirect(url);
 			}
 		} else {
-			req.url = url;
+			req.url = reqPath;
 			serveHandler(req, res, next);
 		}
 	};

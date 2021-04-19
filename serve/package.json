@@ -29,6 +29,7 @@
     "express": "^4.17.1",
     "http-errors": "^1.7.2",
     "resolve": "^1.19.0"
+    "upath": "^2.0.1"
   },
   "devDependencies": {
     "@kapouer/eslint-config": "^1.2.1",
