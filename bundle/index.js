@@ -66,9 +66,8 @@ function bundledom(path, opts, cb) {
 		babelHelpers: 'bundled',
 		comments: minify === false,
 		filter(id) {
-			if (id.includes("\\")) throw new Error("Fixme filter(id) gets windows paths: " + id);
-			if (coreJsRe.test(id)) return false;
 			if (id.startsWith('\0') && !id.startsWith('\0virtual:')) return false;
+			if (coreJsRe.test(Path.toUnix(id))) return false;
 			return true;
 		}
 	};
@@ -348,8 +347,10 @@ function processScripts(doc, opts, data) {
 			]
 		}).then(function (bundle) {
 			for (let i = 1; i < bundle.watchFiles.length; i++) {
-				const item = bundle.watchFiles[i];
-				if (item.startsWith('\0') || coreJsRe.test(item) || item.endsWith("/node_modules/regenerator-runtime/runtime.js")) continue;
+				let item = bundle.watchFiles[i];
+				if (item.startsWith('\0')) continue;
+				item = Path.toUnix(item);
+				if (coreJsRe.test(item) || item.endsWith("/node_modules/regenerator-runtime/runtime.js")) continue;
 				let rel = Path.relative(docRoot, item);
 				if (!data.scripts.includes(rel)) data.scripts.push(rel);
 			}

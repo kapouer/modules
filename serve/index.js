@@ -1,4 +1,4 @@
-const path = require('path');
+const path = require('upath');
 const serveStatic = require('serve-static');
 const Resolver = require('@webmodule/resolve');
 const ModuleServer = require("./server");
