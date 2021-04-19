@@ -20,7 +20,10 @@
   "bugs": {
     "url": "https://github.com/kapouer/webmodule/issues"
   },
-  "homepage": "https://github.com/kapouer/webmodule#readme"
+  "homepage": "https://github.com/kapouer/webmodule#readme",
+  "dependencies": {
+    "upath": "^2.0.1"
+  },
   "eslintConfig": {
     "extends": "@kapouer/eslint-config",
     "env": {
