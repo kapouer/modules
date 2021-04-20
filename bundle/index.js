@@ -453,7 +453,7 @@ function processStylesheets(doc, opts, data) {
 		if (opts.assets) urlOpts.push({
 			url: "copy",
 			useHash: true,
-			assetsPath: getRelativePath(opts.basepath, opts.assets)
+			assetsPath: Path.relative(Path.dirname(opts.css || "."), opts.assets)
 		});
 
 		const plugins = [

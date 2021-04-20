@@ -95,6 +95,7 @@ describe("test suite", function () {
 	});
 
 	it('should support legacy-resolved modules', function () {
+		process.env.BROWSERSLIST = "last 1 chrome version";
 		return bundledom('test/fixtures/legacy.html', {
 			root: "test/fixtures",
 			modulesPrefix: '/',
@@ -277,12 +278,12 @@ describe("test suite", function () {
 			modulesPrefix: "/",
 			modulesRoot: "test",
 			assets: "assets",
-			css: "style.css",
+			css: "css/style.css",
 			root: "test/bundles"
 		}).then(function (data) {
 			data.assets.should.eql(["../node_modules/style/fonts/test.ttf"]);
 			data.stylesheets.should.eql(['node_modules/style']);
-			data.css.should.containEql("url('assets/68a581f6.ttf')");
+			data.css.should.containEql("url('../assets/68a581f6.ttf')");
 			data.css.should.containEql("-webkit-animation-duration: 12ms");
 		});
 	});
