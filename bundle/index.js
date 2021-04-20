@@ -437,6 +437,21 @@ function processStylesheets(doc, opts, data) {
 		}).join("\n");
 		if (!blob) return {};
 		const autoprefixerOpts = {};
+		const urlOpts = [{
+			url(asset) {
+				if (asset.pathname) {
+					const relPath = Path.toUnix(asset.relativePath);
+					if (!data.assets.includes(relPath)) data.assets.push(relPath);
+					return relPath;
+				}
+			},
+			multi: true
+		}];
+		if (opts.assets) urlOpts.push({
+			url: "copy",
+			useHash: true,
+			assetsPath: getRelativePath(opts.basepath, opts.assets)
+		});
 
 		const plugins = [
 			postcssImport(Object.assign({
@@ -448,15 +463,7 @@ function processStylesheets(doc, opts, data) {
 					}
 				})],
 			}, resolverPlugin(opts, "resolve", "css"))),
-			postcssUrl({
-				url: (asset) => {
-					if (asset.pathname) {
-						const relPath = Path.toUnix(asset.relativePath);
-						if (!data.assets.includes(relPath)) data.assets.push(relPath);
-						return relPath;
-					}
-				}
-			}),
+			postcssUrl(urlOpts),
 			postcssFlexBugs
 		];
 		if (opts.minify) {

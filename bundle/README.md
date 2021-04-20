@@ -100,6 +100,7 @@ and `opts` has these properties:
 * remotes: list of allowed remote domains to download from
 * modulesPrefix: the mount path for resolving node_modules (<modules> becomes <modules>/node_modules/xxx/index.js), defaults to "/".
 * modulesRoot: where node modules are to be found. Defaults to ".".
+* assets: if set, copy stylesheets assets to this path relative to root.
 
 Strings are matched simply by searching a substring.
 

@@ -249,6 +249,23 @@ describe("test suite", function () {
 		});
 	});
 
+	it('should bundle stylesheet from a module and copy assets to dir', function () {
+		this.timeout(10000);
+		return bundledom('test/fixtures/style.html', {
+			concatenate: true,
+			modulesPrefix: "/",
+			modulesRoot: "test",
+			assets: "assets",
+			css: "style.css",
+			root: "test/bundles"
+		}).then(function (data) {
+			data.assets.should.eql(["../node_modules/style/fonts/test.ttf"]);
+			data.stylesheets.should.eql(['node_modules/style']);
+			data.css.should.containEql("url('assets/68a581f6.ttf')");
+			data.css.should.containEql("-webkit-animation-duration: 12ms");
+		});
+	});
+
 	it('should import jquery-like bundle with side effects', function () {
 		return bundledom('test/fixtures/fakejquery.html', {
 			concatenate: true

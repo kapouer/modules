@@ -72,6 +72,11 @@ const parser = dash.createParser({options: [
 		names: ['modulesRoot'],
 		type: 'string',
 		help: 'root for node_modules, defaults to .'
+	},
+	{
+		names: ['assets'],
+		type: 'string',
+		help: 'relative path where stylesheets assets are copied, defaults to ./assets'
 	}
 ]});
 
