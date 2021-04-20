@@ -450,11 +450,19 @@ function processStylesheets(doc, opts, data) {
 			multi: true
 		}];
 
-		if (opts.assets) urlOpts.push({
-			url: "copy",
-			useHash: true,
-			assetsPath: Path.relative(Path.dirname(opts.css || "."), opts.assets)
-		});
+		if (opts.assets) {
+			const fixRelative = Path.relative(Path.dirname(opts.css || "."), ".");
+			urlOpts.push({
+				url: "copy",
+				useHash: true,
+				assetsPath: opts.assets
+			}, {
+				url(asset) {
+					if (asset.url) return Path.join(fixRelative, asset.url);
+				},
+				multi: true
+			});
+		}
 
 		const plugins = [
 			postcssImport(Object.assign({
