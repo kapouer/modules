@@ -48,7 +48,7 @@ describe("test suite", function () {
 			concatenate: true
 		}).then(function (data) {
 			data.should.have.property('js');
-			data.js.should.containEql("window.towin = true;");
+			data.js.should.containEql("this.towin = true;");
 			data.should.have.property('html');
 		});
 	});
@@ -103,11 +103,32 @@ describe("test suite", function () {
 			concatenate: true
 		}).then(function (data) {
 			data.scripts.sort().should.eql([
-				'../node_modules/redirect-exports/src/index.js',
 				'mod.js',
-				'depmod.js'
+				'depmod.js',
+				'node_modules/redirect-exports'
 			].sort());
 			data.should.have.property('js');
+		}).finally(() => {
+			delete process.env.BROWSERSLIST;
+		});
+	});
+
+	it('should support legacy-resolved jquery-like with ignored file', function () {
+		process.env.BROWSERSLIST = "last 1 chrome version";
+		return bundledom('test/fixtures/legacy2.html', {
+			root: "test/fixtures",
+			modulesPrefix: '/',
+			modulesRoot: "test",
+			exclude: [],
+			concatenate: true
+		}).then(function (data) {
+			data.should.have.property('js');
+			data.scripts.should.eql([
+				'fakejquery.js', 'usejquery.js', 'mod.js', 'depmod.js'
+			]);
+
+		}).finally(() => {
+			delete process.env.BROWSERSLIST;
 		});
 	});
 

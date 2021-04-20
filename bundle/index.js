@@ -292,13 +292,12 @@ function processScripts(doc, opts, data) {
 					return response.body.toString();
 				}));
 			} else if (modulesResolver) {
-				// TODO docRoot ou opts.basepath ?
-				const level = Path.relative(docRoot, opts.root);
-
+				data.scripts.push(src);
 				legacies.push(
 					Promise.resolve().then(async () => {
+						// TODO docRoot ou opts.basepath ?
+						const level = Path.relative(docRoot, opts.root);
 						const solved = await modulesResolver.resolveId(Path.join(level, src), docRoot) || path;
-						data.scripts.push(Path.relative(opts.root, solved));
 						return readFile(solved);
 					})
 				);
@@ -331,12 +330,15 @@ function processScripts(doc, opts, data) {
 		if (entries.length == 0 && dataList.length == 0) return {};
 		const virtuals = {};
 		const bundle = entries.map(function (entry) {
-			const path = entry.path || entry.name;
+			const path = Path.toUnix(entry.path || entry.name);
 			if (entry.data) virtuals[entry.name] = entry.data;
-			return `import "${path.replace(/\\/g, '/')}";`;
+			return `import "${path}";`;
 		}).join('\n');
 		const bundleName = '__entry__.js';
-		virtuals[bundleName] = dataList.join('\n') + bundle;
+		const legsName = '__legacies__.js';
+		virtuals[legsName] = `(function() { ${dataList.join('\n')} }).call(window);`;
+		virtuals[bundleName] = `import "${legsName}";
+		${bundle}`;
 
 		return rollup.rollup({
 			input: bundleName,
@@ -447,6 +449,7 @@ function processStylesheets(doc, opts, data) {
 			},
 			multi: true
 		}];
+
 		if (opts.assets) urlOpts.push({
 			url: "copy",
 			useHash: true,
