@@ -603,9 +603,9 @@ function appendToPivot(scripts, list, tag, att, ext, attrs) {
 function loadDom(path, basepath) {
 	if (!basepath) basepath = path;
 	else basepath = Path.join(basepath, Path.basename(path));
-	return readFile(path).then(function (data) {
+	return readFile(path).then(function (html) {
 		const abspath = Path.resolve(basepath);
-		const dom = new JSDOM(data, {
+		const dom = new JSDOM(html, {
 			url: URL.format({
 				protocol: 'file:',
 				pathname: abspath
@@ -618,17 +618,17 @@ function loadDom(path, basepath) {
 
 function readFile(path) {
 	return new Promise(function (resolve, reject) {
-		fs.readFile(path, function (err, data) {
+		fs.readFile(path, function (err, buf) {
 			if (err) reject(err);
-			else resolve(data.toString());
+			else resolve(buf.toString());
 		});
 	});
 }
 
-function writeFile(path, data) {
+function writeFile(path, buf) {
 	return new Promise(function (resolve, reject) {
 		mkdirp(Path.dirname(path)).then(function () {
-			fs.writeFile(path, data, function (err) {
+			fs.writeFile(path, buf, function (err) {
 				if (err) reject(err);
 				else resolve();
 			});
