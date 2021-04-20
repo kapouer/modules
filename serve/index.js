@@ -20,15 +20,15 @@ module.exports = function ({ prefix = "/", root = "." } = {}) {
 		if (req.method != "GET" || !reqPath.startsWith(reqPrefix)) {
 			return next('route');
 		}
-		const isNotDev = req.app.settings.env != "development";
+		if (req.app.settings.env != "development") {
+			console.warn("This route is forbidden when not in development", reqPrefix);
+			return next(new HttpError.NotFound());
+		}
 
 		const ext = path.extname(reqPath).substring(1);
 
 		const ref = req.headers['referer'] || "";
 		if (ext && /^m?js$/.test(ext) && /\.m?js$/.test(ref)) {
-			if (isNotDev) {
-				return next(new HttpError.Unauthorized(`${reqPrefix} allows js files only for development`));
-			}
 			try {
 				if (!moduleServer.handleRequest(req, res)) res.sendStatus(404);
 			} catch (err) {
