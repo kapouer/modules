@@ -6,7 +6,7 @@ const postcssImport = require('postcss-import');
 const postcssFlexBugs = require('postcss-flexbugs-fixes');
 const presetEnv = require.resolve('@babel/preset-env');
 const autoprefixer = require('autoprefixer');
-const cssnano = require('cssnano');
+const csso = require('postcss-csso');
 const rollup = require('rollup');
 const rollupBabel = require('@rollup/plugin-babel');
 const rollupTerser = require('rollup-plugin-terser');
@@ -490,19 +490,11 @@ function processStylesheets(doc, opts, data) {
 				})],
 			}, resolverPlugin(opts, "resolve", "css"))),
 			postcssUrl(urlOpts),
-			postcssFlexBugs
+			postcssFlexBugs,
+			autoprefixer(autoprefixerOpts)
 		];
 		if (opts.minify) {
-			plugins.push(cssnano({
-				plugins: [[autoprefixer, autoprefixerOpts]],
-				preset: ['default', {
-					discardComments: {
-						removeAll: true
-					}
-				}]
-			}));
-		} else {
-			plugins.push(autoprefixer(autoprefixerOpts));
+			plugins.push(csso);
 		}
 		plugins.push(reporter);
 
