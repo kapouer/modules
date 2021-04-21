@@ -340,14 +340,12 @@ function processScripts(doc, opts, data) {
 		const bundle = entries.map(function (entry, i) {
 			let { src, dst, blob } = entry;
 			if (src) data.scripts.push(src);
-			let name = src || `__script${i}__`;
 			if (blob) {
-				virtuals[name] = blob;
-				dst = name;
+				dst = `__script${i}__.js`;
+				virtuals[dst] = blob;
 			}
 			if (!dst) {
-				console.error("Entry without dst: " + name);
-				return "";
+				throw new Error(`Entry ${i} without dst : ${src}`);
 			} else {
 				return `import "${Path.toUnix(dst)}";`;
 			}
@@ -678,11 +676,16 @@ function resolverPlugin({ modulesPrefix = "/", modulesRoot = ".", root = "." }, 
 		name: "native import modules resolver",
 		async [key](source, importer) {
 			const usource = Path.toUnix(source);
-			const importerDir = Path.relative(
-				absRoot,
-				Path.extname(importer) ? Path.dirname(importer) : importer
-			);
-			if (source.includes('\0') || importer.includes('\0') || importerDir.includes("/node_modules/") || regModules.test(usource) == false) {
+			let ignore = source.includes('\0') || importer.includes('\0');
+			let importerDir;
+			if (!ignore) {
+				importerDir = Path.relative(
+					absRoot,
+					Path.extname(importer) ? Path.dirname(importer) : importer
+				);
+				ignore = importerDir.includes("/node_modules/") || regModules.test(usource) == false;
+			}
+			if (ignore) {
 				// let other resolvers work
 				if (type == "js") {
 					return null;
