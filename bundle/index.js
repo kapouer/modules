@@ -93,13 +93,13 @@ function bundledom(path, opts, cb) {
 				return writeFile(cssPath, data.css).then(function () {
 					// eslint-disable-next-line no-console
 					if (opts.cli) console.warn(opts.css);
-					if (data.cssmap) {
-						const cssMapPath = cssPath + '.map';
-						return writeFile(cssMapPath, data.cssmap).then(function () {
-							// eslint-disable-next-line no-console
-							if (opts.cli) console.warn(opts.css + ".map");
-						});
-					}
+					// if (data.cssmap) {
+					// 	const cssMapPath = cssPath + '.map';
+					// 	return writeFile(cssMapPath, data.cssmap).then(function () {
+					// 		// eslint-disable-next-line no-console
+					// 		if (opts.cli) console.warn(opts.css + ".map");
+					// 	});
+					// }
 				});
 			}
 		}).then(function () {
@@ -122,13 +122,13 @@ function bundledom(path, opts, cb) {
 					return writeFile(jsPath, data.js).then(function () {
 						// eslint-disable-next-line no-console
 						if (opts.cli) console.warn(opts.js);
-						if (data.jsmap) {
-							const jsMapPath = jsPath + '.map';
-							return writeFile(jsMapPath, data.jsmap).then(function () {
-								// eslint-disable-next-line no-console
-								if (opts.cli) console.warn(opts.js + ".map");
-							});
-						}
+						// if (data.jsmap) {
+						// 	const jsMapPath = jsPath + '.map';
+						// 	return writeFile(jsMapPath, data.jsmap).then(function () {
+						// 		// eslint-disable-next-line no-console
+						// 		if (opts.cli) console.warn(opts.js + ".map");
+						// 	});
+						// }
 					});
 				});
 			}
@@ -148,8 +148,8 @@ function processDocument(doc, opts, data) {
 		scripts: [],
 		stylesheets: [],
 		assets: [],
-		jsmap: "",
-		cssmap: ""
+		// jsmap: "",
+		// cssmap: ""
 	});
 	if (!data.js) data.js = "";
 	if (!data.css) data.css = "";
@@ -160,12 +160,12 @@ function processDocument(doc, opts, data) {
 	}).then(function () {
 		return processScripts(doc, opts, data).then(function (obj) {
 			if (obj.str) data.js += obj.str;
-			if (obj.map) data.jsmap += obj.map;
+			// if (obj.map) data.jsmap += obj.map;
 		});
 	}).then(function () {
 		return processStylesheets(doc, opts, data).then(function (obj) {
 			if (obj.css) data.css += obj.css;
-			if (obj.map) data.cssmap += obj.map;
+			// if (obj.map) data.cssmap += obj.map;
 		});
 	}).then(function () {
 		return data;
@@ -380,14 +380,14 @@ function processScripts(doc, opts, data) {
 			});
 		}).then(function (result) {
 			const codeList = [];
-			const mapList = [];
+			// const mapList = [];
 			result.output.forEach(function (chunk) {
 				if (chunk.code) codeList.push(chunk.code);
-				if (chunk.map) mapList.push(chunk.map);
+				// if (chunk.map) mapList.push(chunk.map);
 			});
 			return {
 				str: codeList.join('\n'),
-				map: mapList.join('\n')
+				// map: mapList.join('\n')
 			};
 		});
 	});
@@ -503,9 +503,10 @@ function processStylesheets(doc, opts, data) {
 		return postcss(plugins).process(blob, {
 			from: path,
 			to: path + '.css',
-			map: {
-				inline: false
-			}
+			map: false,
+			// {
+			// 	inline: false
+			// }
 		});
 	});
 }
