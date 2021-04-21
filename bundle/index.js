@@ -21,7 +21,6 @@ const MaxWorkers = Math.min(require('os').cpus().length - 1, 4);
 
 const fs = require('fs');
 const Path = require('upath');
-const URL = require('url');
 const got = require('got');
 
 const minimatch = require("minimatch");
@@ -261,49 +260,57 @@ function processScripts(doc, opts, data) {
 	appendToPivot(allScripts, opts.append, 'script', 'src', 'js');
 
 	const entries = [];
-	const legacies = [];
 
 	const modulesResolver = resolverPlugin(opts, "resolveId", "js");
 
 
 	allScripts.forEach(function (node, i) {
 		const src = node.getAttribute('src');
+		let dst = src;
 		const esm = node.getAttribute('type') == "module";
-		const name = "__node__" + i + ".js";
 
 		if (src) {
-			if (filterByName(src, opts.ignore)) {
+			if (src.startsWith('//')) {
+				dst = "https:" + src;
+			}
+			if (filterByName(dst, opts.ignore)) {
 				return;
 			}
-			if (filterByName(src, opts.exclude)) {
+			if (filterByName(dst, opts.exclude)) {
 				removeNodeAndSpaceBefore(node);
 				return;
 			}
-
-			const path = src.startsWith('/')
-				? Path.join(opts.root, src)
-				: Path.join(docRoot, src);
-			if (esm) {
-				entries.push({ name, path });
-				data.scripts.push(src);
-			} else if (filterRemotes(src, opts.remotes) == 1) {
-				data.scripts.push(src);
-				legacies.push(got((src.startsWith('//') ? "https:" : "") + src).then(function (response) {
-					return response.body.toString();
-				}));
-			} else if (modulesResolver) {
-				data.scripts.push(src);
-				legacies.push(
-					Promise.resolve().then(async () => {
-						// TODO docRoot ou opts.basepath ?
+			if (/^https?:\/\//.test(dst) == false) {
+				dst = src.startsWith('/')
+					? Path.join(opts.root, src)
+					: Path.join(docRoot, src);
+				if (modulesResolver) {
+					entries.push((async () => {
 						const level = Path.relative(docRoot, opts.root);
-						const solved = await modulesResolver.resolveId(Path.join(level, src), docRoot) || path;
-						return readFile(solved);
-					})
-				);
-			} else {
-				data.scripts.push(path);
-				legacies.push(readFile(path));
+						dst = await modulesResolver.resolveId(
+							Path.join(level, src), docRoot
+						) || dst;
+						if (esm) {
+							return { src, dst };
+						} else {
+							return {
+								src,
+								dst,
+								blob: wrapWindow(await readFile(dst))
+							};
+						}
+					})());
+				} else if (esm) {
+					entries.push({ src, dst });
+				} else {
+					entries.push((async () => {
+						return {
+							src,
+							dst,
+							blob: wrapWindow(await readFile(dst))
+						};
+					})());
+				}
 			}
 		} else if (node.textContent) {
 			if (~opts.ignore.indexOf('.')) {
@@ -315,30 +322,38 @@ function processScripts(doc, opts, data) {
 			}
 			if (esm) {
 				entries.push({
-					name: name,
-					data: node.textContent
+					blob: node.textContent
 				});
 			} else {
-				legacies.push(Promise.resolve(node.textContent));
+				entries.push({
+					blob: wrapWindow(node.textContent)
+				});
 			}
 		} else {
 			return;
 		}
 		removeNodeAndSpaceBefore(node);
 	});
-	return Promise.all(legacies).then(function (dataList) {
-		if (entries.length == 0 && dataList.length == 0) return {};
+	return Promise.all(entries).then(function (entries) {
+		if (entries.length == 0) return {};
 		const virtuals = {};
-		const bundle = entries.map(function (entry) {
-			const path = Path.toUnix(entry.path || entry.name);
-			if (entry.data) virtuals[entry.name] = entry.data;
-			return `import "${path}";`;
+		const bundle = entries.map(function (entry, i) {
+			let { src, dst, blob } = entry;
+			if (src) data.scripts.push(src);
+			let name = src || `__script${i}__`;
+			if (blob) {
+				virtuals[name] = blob;
+				dst = name;
+			}
+			if (!dst) {
+				console.error("Entry without dst: " + name);
+				return "";
+			} else {
+				return `import "${Path.toUnix(dst)}";`;
+			}
 		}).join('\n');
 		const bundleName = '__entry__.js';
-		const legsName = '__legacies__.js';
-		virtuals[legsName] = `(function() { ${dataList.join('\n')} }).call(window);`;
-		virtuals[bundleName] = `import "${legsName}";
-		${bundle}`;
+		virtuals[bundleName] = bundle;
 
 		return rollup.rollup({
 			input: bundleName,
@@ -400,8 +415,10 @@ function processStylesheets(doc, opts, data) {
 	appendToPivot(allLinks, opts.append, 'link', 'href', 'css', { rel: "stylesheet" });
 
 	return Promise.all(allLinks.map(function (node) {
-		let src = node.getAttribute('href');
+		const src = node.getAttribute('href');
+		let dst = src;
 		if (src) {
+			if (src.startsWith('//')) dst = "https:" + src;
 			if (filterByName(src, opts.ignore)) {
 				return "";
 			}
@@ -409,19 +426,19 @@ function processStylesheets(doc, opts, data) {
 			if (filterByName(src, opts.exclude)) {
 				return "";
 			}
-			data.stylesheets.push(src);
-			if (filterRemotes(src, opts.remotes) == 1) {
-				if (src.startsWith('//')) src = "https:" + src;
-				return got(src).then(function (response) {
+			if (/^https?:\/\//.test(dst) == false) {
+				data.stylesheets.push(src);
+				if (src.startsWith('/')) {
+					dst = Path.relative(docRoot, Path.join(opts.root, src));
+				} else if (!src.startsWith('.')) {
+					dst = "./" + src;
+				}
+				return `@import url("${dst}");`;
+			} else if (filterRemotes(dst, opts.remotes) == 1) {
+				data.stylesheets.push(src);
+				return got(dst).then(function (response) {
 					return response.body.toString();
 				});
-			} else {
-				if (src.startsWith('/')) {
-					src = Path.relative(docRoot, Path.join(opts.root, src));
-				} else if (!src.startsWith('.')) {
-					src = "./" + src;
-				}
-				return `@import url("${src}");`;
 			}
 		} else if (node.textContent) {
 			if (~opts.ignore.indexOf('.')) {
@@ -490,6 +507,7 @@ function processStylesheets(doc, opts, data) {
 			plugins.push(autoprefixer(autoprefixerOpts));
 		}
 		plugins.push(reporter);
+
 		return postcss(plugins).process(blob, {
 			from: path,
 			to: path + '.css',
@@ -507,12 +525,17 @@ function getRelativePath(basepath, path) {
 	else return dir;
 }
 
+function wrapWindow(str) {
+	return `(function() {
+		${str}
+	}).call(window);`;
+}
+
 function filterRemotes(src, remotes) {
 	// return -1 for not remote
 	// return 0 for undownloadable remote
 	// return 1 for downloadable remote
-	if (src.startsWith('//')) src = 'https:' + src;
-	const host = URL.parse(src).host;
+	const host = new URL(src, "a://").host;
 	if (!host) return -1;
 	if (!remotes) return 0;
 	if (remotes.some(function (rem) {
@@ -536,7 +559,7 @@ function filterByExt(list, ext) {
 	if (!list) return [];
 	ext = '.' + ext;
 	return list.filter(function (src) {
-		return Path.extname(URL.parse(src).pathname) == ext;
+		return Path.extname(new URL(src, "a://").pathname) == ext;
 	});
 }
 
@@ -617,10 +640,7 @@ function loadDom(path, basepath) {
 	return readFile(path).then(function (html) {
 		const abspath = Path.resolve(basepath);
 		const dom = new JSDOM(html, {
-			url: URL.format({
-				protocol: 'file:',
-				pathname: abspath
-			})
+			url: `file://${abspath}`
 		});
 		dom.basepath = abspath;
 		return dom;
