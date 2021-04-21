@@ -494,7 +494,9 @@ function processStylesheets(doc, opts, data) {
 			autoprefixer(autoprefixerOpts)
 		];
 		if (opts.minify) {
-			plugins.push(csso);
+			plugins.push(csso({
+				comments: false
+			}));
 		}
 		plugins.push(reporter);
 
