@@ -33,7 +33,7 @@ module.exports = bundledom;
 
 /* global document */
 
-function bundledom(path, opts, cb) {
+async function bundledom(path, opts) {
 	opts = Object.assign({
 		remotes: [],
 		prepend: [],
@@ -75,73 +75,56 @@ function bundledom(path, opts, cb) {
 
 	opts.babel = babelOpts;
 
-	let p = loadDom(path, opts.root).then(function (dom) {
-		opts.basepath = dom.basepath;
-		const data = {};
-		const doc = dom.window.document;
-		return processDocument(doc, opts, data).then(function () {
-			if (!opts.css) {
-				if (data.css) data.js += '\n(' + function () {
-					const sheet = document.createElement('style');
-					sheet.type = 'text/css';
-					// eslint-disable-next-line no-undef
-					sheet.textContent = CSS;
-					document.head.appendChild(sheet);
-				}.toString().replace('CSS', function () {
-					return JSON.stringify(data.css);
-				}) + ')();';
-			} else {
-				const cssPath = getRelativePath(opts.basepath, opts.css);
-				return writeFile(cssPath, data.css).then(function () {
-					// eslint-disable-next-line no-console
-					if (opts.cli) console.warn(opts.css);
-					// if (data.cssmap) {
-					// 	const cssMapPath = cssPath + '.map';
-					// 	return writeFile(cssMapPath, data.cssmap).then(function () {
-					// 		// eslint-disable-next-line no-console
-					// 		if (opts.cli) console.warn(opts.css + ".map");
-					// 	});
-					// }
-				});
-			}
-		}).then(function () {
-			const html = dom.serialize();
-			let p = Promise.resolve();
-			if (opts.html) {
-				p = p.then(function () {
-					const htmlPath = getRelativePath(opts.basepath, opts.html);
-					return writeFile(htmlPath, html).then(function () {
-						// eslint-disable-next-line no-console
-						if (opts.cli) console.warn(opts.html);
-					});
-				});
-			} else {
-				data.html = html;
-			}
-			if (opts.js) {
-				p = p.then(function () {
-					const jsPath = getRelativePath(opts.basepath, opts.js);
-					return writeFile(jsPath, data.js).then(function () {
-						// eslint-disable-next-line no-console
-						if (opts.cli) console.warn(opts.js);
-						// if (data.jsmap) {
-						// 	const jsMapPath = jsPath + '.map';
-						// 	return writeFile(jsMapPath, data.jsmap).then(function () {
-						// 		// eslint-disable-next-line no-console
-						// 		if (opts.cli) console.warn(opts.js + ".map");
-						// 	});
-						// }
-					});
-				});
-			}
-			return p.then(function () {
-				if (cb) cb(null, data);
-				return data;
-			});
-		});
-	});
-	if (cb) p = p.catch(cb);
-	else return p;
+	const dom = await loadDom(path, opts.root);
+	opts.basepath = dom.basepath;
+	const data = {};
+	const doc = dom.window.document;
+	await processDocument(doc, opts, data);
+	if (!opts.css) {
+		if (data.css) data.js += '\n(' + function () {
+			const sheet = document.createElement('style');
+			sheet.type = 'text/css';
+			// eslint-disable-next-line no-undef
+			sheet.textContent = CSS;
+			document.head.appendChild(sheet);
+		}.toString().replace('CSS', function () {
+			return JSON.stringify(data.css);
+		}) + ')();';
+	} else {
+		const cssPath = getRelativePath(opts.basepath, opts.css);
+		await writeFile(cssPath, data.css);
+		// eslint-disable-next-line no-console
+		if (opts.cli) console.warn(opts.css);
+		// if (data.cssmap) {
+		// 	const cssMapPath = cssPath + '.map';
+		// 	await writeFile(cssMapPath, data.cssmap);
+		// 	// eslint-disable-next-line no-console
+		// 	if (opts.cli) console.warn(opts.css + ".map");
+		// }
+	}
+	let html = dom.serialize();
+	if (opts.html) {
+
+		const htmlPath = getRelativePath(opts.basepath, opts.html);
+		await writeFile(htmlPath, html);
+		// eslint-disable-next-line no-console
+		if (opts.cli) console.warn(opts.html);
+	} else {
+		data.html = html;
+	}
+	if (opts.js) {
+		const jsPath = getRelativePath(opts.basepath, opts.js);
+		await writeFile(jsPath, data.js);
+		// eslint-disable-next-line no-console
+		if (opts.cli) console.warn(opts.js);
+		// if (data.jsmap) {
+		// 	const jsMapPath = jsPath + '.map';
+		// 	await writeFile(jsMapPath, data.jsmap);
+		// 	// eslint-disable-next-line no-console
+		// 	if (opts.cli) console.warn(opts.js + ".map");
+		// }
+	}
+	return data;
 }
 
 function processDocument(doc, opts, data) {
