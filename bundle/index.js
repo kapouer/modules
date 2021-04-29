@@ -257,13 +257,29 @@ function processScripts(doc, opts, data) {
 		return !node.type || node.type == "text/javascript" || node.type == "module";
 	});
 	prependToPivot(allScripts, opts.prepend, 'script', 'src', 'js');
-	appendToPivot(allScripts, opts.append, 'script', 'src', 'js');
+	const pivot = appendToPivot(allScripts, opts.append, 'script', 'src', 'js');
 
 	const entries = [];
 
 	const modulesResolver = resolverPlugin(opts, "resolveId", "js");
+	let defer = false;
 
-
+	allScripts.sort(function (a, b) {
+		const am = a.type == "module";
+		const bm = b.type == "module";
+		if (am || bm) defer = true;
+		const ar = a.defer;
+		const br = b.defer;
+		if (am && bm) return 0;
+		if (!am && bm) return -1;
+		if (am && !bm) return 1;
+		if (!am && !bm) {
+			if (ar && br || !ar && !br) return 0;
+			if (!ar && br) return -1;
+			if (ar && !br) return 1;
+		}
+	});
+	if (opts.js && defer) pivot.nextElementSibling.setAttribute('defer', '');
 	allScripts.forEach(function (node, i) {
 		const src = node.getAttribute('src');
 		let dst = src;
@@ -625,6 +641,7 @@ function appendToPivot(scripts, list, tag, att, ext, attrs) {
 		scripts.push(createSibling(pivot, 'after', tag, attrs));
 		debug("appended", tag, att, src);
 	}
+	return pivot;
 }
 
 function loadDom(path, basepath) {

@@ -133,6 +133,28 @@ describe("test suite", function () {
 		});
 	});
 
+	it('should order scripts w.r.t. defer, module, or nothing', function () {
+		process.env.BROWSERSLIST = "last 1 chrome version";
+		return bundledom('test/fixtures/legacy3.html', {
+			root: "test/fixtures",
+			modulesPrefix: '/',
+			modulesRoot: "test",
+			exclude: [],
+			concatenate: true,
+			js: '../bundles/legacy3.js'
+		}).then(function (data) {
+			data.should.have.property('js');
+			data.scripts.should.eql([
+				'usejquery.js', 'fakejquery.js', 'mod.js', 'depmod.js'
+			]);
+			data.html.should.containEql('../bundles/legacy3.js');
+			data.html.should.containEql('defer=""');
+
+		}).finally(() => {
+			delete process.env.BROWSERSLIST;
+		});
+	});
+
 	it('should ignore a script', function () {
 		return bundledom('test/fixtures/exclude.html', {
 			ignore: ['b.js']
