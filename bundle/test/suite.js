@@ -26,20 +26,21 @@ function runDom(htmlPath, data) {
 describe("test suite", function () {
 	this.timeout(10000);
 
-	it('should do the most simplest basic js test', function () {
+	it('should do the most simplest basic js test', async function () {
 		process.env.BROWSERSLIST = "ie >= 8";
-		return bundledom('test/fixtures/basic.html', {
-			exclude: [],
-			concatenate: true
-		}).then(function (data) {
+		try {
+			const data = await bundledom('test/fixtures/basic.html', {
+				exclude: [],
+				concatenate: true
+			});
 			data.should.have.property('js');
 			data.js.should.containEql("Array.from([12, 34]).map(function");
 			data.should.have.property('css');
 			data.css.should.containEql("-ms-transform: opacity");
 			data.should.have.property('html');
-		}).finally(() => {
+		} finally {
 			delete process.env.BROWSERSLIST;
-		});
+		}
 	});
 
 	it('should concat js for legacy scripts', function () {

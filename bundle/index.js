@@ -21,7 +21,7 @@ const JSDOM = require('jsdom').JSDOM;
 const mkdirp = require('mkdirp');
 const MaxWorkers = Math.min(require('os').cpus().length - 1, 4);
 
-const fs = require('fs');
+const fs = require('fs').promises;
 const Path = require('upath');
 const got = require('got');
 
@@ -127,7 +127,7 @@ async function bundledom(path, opts) {
 	return data;
 }
 
-function processDocument(doc, opts, data) {
+async function processDocument(doc, opts, data) {
 	Object.assign(data, {
 		imports: [],
 		scripts: [],
@@ -138,30 +138,26 @@ function processDocument(doc, opts, data) {
 	});
 	if (!data.js) data.js = "";
 	if (!data.css) data.css = "";
-	return Promise.resolve().then(function () {
-		return processCustom(doc, opts, data);
-	}).then(function () {
-		return prepareImports(doc, opts, data);
-	}).then(function () {
-		return processScripts(doc, opts, data).then(function (obj) {
-			if (obj.str) data.js += obj.str;
-			// if (obj.map) data.jsmap += obj.map;
-		});
-	}).then(function () {
-		return processStylesheets(doc, opts, data).then(function (obj) {
-			if (obj.css) data.css += obj.css;
-			// if (obj.map) data.cssmap += obj.map;
-		});
-	}).then(function () {
-		return data;
-	});
+	await processCustom(doc, opts, data);
+	await prepareImports(doc, opts, data);
+
+
+	let obj = await processScripts(doc, opts, data);
+	if (obj.str) data.js += obj.str;
+	// if (obj.map) data.jsmap += obj.map;
+
+
+	obj = await processStylesheets(doc, opts, data);
+	if (obj.css) data.css += obj.css;
+	// if (obj.map) data.cssmap += obj.map;
+	return data;
 }
 
-function processCustom(doc, opts, data) {
+async function processCustom(doc, opts, data) {
 	if (opts.custom) return opts.custom(doc, opts, data);
 }
 
-function prepareImports(doc, opts, data) {
+async function prepareImports(doc, opts, data) {
 	const docRoot = Path.dirname(opts.basepath);
 
 	const allLinks = Array.from(doc.querySelectorAll('link[href][rel="import"]'));
@@ -170,7 +166,7 @@ function prepareImports(doc, opts, data) {
 	appendToPivot(allLinks, opts.append, 'link', 'href', 'html', { rel: "import" });
 
 	// the order is not important
-	return Promise.all(allLinks.map(function (node) {
+	return Promise.all(allLinks.map(async function (node) {
 		let src = node.getAttribute('href');
 		if (filterByName(src, opts.ignore)) {
 			return;
@@ -187,50 +183,48 @@ function prepareImports(doc, opts, data) {
 			src = Path.join(docRoot, src);
 		}
 
-		return loadDom(src, Path.dirname(src)).then(function (idom) {
-			const iopts = Object.assign({}, opts, {
-				append: [],
-				prepend: [],
-				exclude: [],
-				ignore: [],
-				css: null,
-				js: null,
-				basepath: idom.basepath
-			});
-			const idoc = idom.window.document;
-			return processDocument(idoc, iopts, {}).then(function (data) {
-				// make sure no variable can leak to SCRIPT
-				let iscript = function (html) {
-					if (!document._currentScript) document._currentScript = {};
-					document._currentScript.parentOwner = (document.currentScript || document._currentScript).ownerDocument;
-					document._currentScript.ownerDocument = document.implementation.createHTMLDocument("");
-					try {
-						document._currentScript.ownerDocument.documentElement.innerHTML = html;
-					} catch (ex) {
-						// IE < 10 fallback
-						document._currentScript.ownerDocument.body.innerHTML = html;
-					}
-					// eslint-disable-next-line no-undef
-					SCRIPT;
-					document._currentScript.ownerDocument = document._currentScript.parentOwner;
-					delete document._currentScript.parentOwner;
-				}.toString().replace("SCRIPT;", function () {
-					return data.js;
-				});
-				iscript = '\n(' + iscript + ')(' +
-					JSON.stringify(idoc.documentElement.innerHTML)
-					+ ');';
-				createSibling(node, 'before', 'script').textContent = iscript;
-				if (data.css) {
-					createSibling(node, 'before', 'style').textContent = data.css;
-				}
-				removeNodeAndSpaceBefore(node);
-			});
+		const idom = await loadDom(src, Path.dirname(src));
+		const iopts = Object.assign({}, opts, {
+			append: [],
+			prepend: [],
+			exclude: [],
+			ignore: [],
+			css: null,
+			js: null,
+			basepath: idom.basepath
 		});
+		const idoc = idom.window.document;
+		const idata = await processDocument(idoc, iopts, {});
+		// make sure no variable can leak to SCRIPT
+		let iscript = function (html) {
+			if (!document._currentScript) document._currentScript = {};
+			document._currentScript.parentOwner = (document.currentScript || document._currentScript).ownerDocument;
+			document._currentScript.ownerDocument = document.implementation.createHTMLDocument("");
+			try {
+				document._currentScript.ownerDocument.documentElement.innerHTML = html;
+			} catch (ex) {
+				// IE < 10 fallback
+				document._currentScript.ownerDocument.body.innerHTML = html;
+			}
+			// eslint-disable-next-line no-undef
+			SCRIPT;
+			document._currentScript.ownerDocument = document._currentScript.parentOwner;
+			delete document._currentScript.parentOwner;
+		}.toString().replace("SCRIPT;", function () {
+			return idata.js;
+		});
+		iscript = '\n(' + iscript + ')(' +
+			JSON.stringify(idoc.documentElement.innerHTML)
+			+ ');';
+		createSibling(node, 'before', 'script').textContent = iscript;
+		if (idata.css) {
+			createSibling(node, 'before', 'style').textContent = idata.css;
+		}
+		removeNodeAndSpaceBefore(node);
 	}));
 }
 
-function processScripts(doc, opts, data) {
+async function processScripts(doc, opts, data) {
 	const docRoot = getRelativePath(opts.basepath);
 	if (opts.js) {
 		opts.append.unshift(opts.js);
@@ -243,8 +237,6 @@ function processScripts(doc, opts, data) {
 	});
 	prependToPivot(allScripts, opts.prepend, 'script', 'src', 'js');
 	const pivot = appendToPivot(allScripts, opts.append, 'script', 'src', 'js');
-
-	const entries = [];
 
 	const modulesResolver = resolverPlugin(opts, "resolveId", "js");
 	let defer = false;
@@ -265,6 +257,7 @@ function processScripts(doc, opts, data) {
 		}
 	});
 	if (opts.js && defer) pivot.nextElementSibling.setAttribute('defer', '');
+	const sources = [];
 	allScripts.forEach(function (node, i) {
 		const src = node.getAttribute('src');
 		let dst = src;
@@ -286,7 +279,7 @@ function processScripts(doc, opts, data) {
 					? Path.join(opts.root, src)
 					: Path.join(docRoot, src);
 				if (modulesResolver) {
-					entries.push((async () => {
+					sources.push((async () => {
 						const level = Path.relative(docRoot, opts.root);
 						dst = await modulesResolver.resolveId(
 							Path.join(level, src), docRoot
@@ -302,9 +295,9 @@ function processScripts(doc, opts, data) {
 						}
 					})());
 				} else if (esm) {
-					entries.push({ src, dst });
+					sources.push({ src, dst });
 				} else {
-					entries.push((async () => {
+					sources.push((async () => {
 						return {
 							src,
 							dst,
@@ -322,11 +315,11 @@ function processScripts(doc, opts, data) {
 				return;
 			}
 			if (esm) {
-				entries.push({
+				sources.push({
 					blob: node.textContent
 				});
 			} else {
-				entries.push({
+				sources.push({
 					blob: wrapWindow(node.textContent)
 				});
 			}
@@ -335,66 +328,63 @@ function processScripts(doc, opts, data) {
 		}
 		removeNodeAndSpaceBefore(node);
 	});
-	return Promise.all(entries).then(function (entries) {
-		if (entries.length == 0) return {};
-		const virtuals = {};
-		const bundle = entries.map(function (entry, i) {
-			let { src, dst, blob } = entry;
-			if (src) data.scripts.push(src);
-			if (blob) {
-				dst = `__script${i}__.js`;
-				virtuals[dst] = blob;
-			}
-			if (!dst) {
-				throw new Error(`Entry ${i} without dst : ${src}`);
-			} else {
-				return `import "${Path.toUnix(dst)}";`;
-			}
-		}).join('\n');
-		const bundleName = '__entry__.js';
-		virtuals[bundleName] = bundle;
+	const entries = await Promise.all(sources);
+	if (entries.length == 0) return {};
+	const virtuals = {};
+	const bundle = entries.map(function (entry, i) {
+		let { src, dst, blob } = entry;
+		if (src) data.scripts.push(src);
+		if (blob) {
+			dst = `__script${i}__.js`;
+			virtuals[dst] = blob;
+		}
+		if (!dst) {
+			throw new Error(`Entry ${i} without dst : ${src}`);
+		} else {
+			return `import "${Path.toUnix(dst)}";`;
+		}
+	}).join('\n');
+	const bundleName = '__entry__.js';
+	virtuals[bundleName] = bundle;
 
-		return rollup.rollup({
-			input: bundleName,
-			context: 'window',
-			plugins: [
-				rollupVirtual(virtuals),
-				modulesResolver,
-				rollupResolve.nodeResolve({ browser: true }),
-				rollupCommonjs(),
-				rollupBabel.babel(opts.babel),
-				opts.minify ? rollupTerser.terser({
-					numWorkers: MaxWorkers
-				}) : null
-			]
-		}).then(function (bundle) {
-			for (let i = 1; i < bundle.watchFiles.length; i++) {
-				let item = bundle.watchFiles[i];
-				if (item.startsWith('\0')) continue;
-				item = Path.toUnix(item);
-				if (coreJsRe.test(item) || item.endsWith("/node_modules/regenerator-runtime/runtime.js")) continue;
-				let rel = Path.relative(docRoot, item);
-				if (!data.scripts.includes(rel)) data.scripts.push(rel);
-			}
-			return bundle.generate({
-				format: 'iife'
-			});
-		}).then(function (result) {
-			const codeList = [];
-			// const mapList = [];
-			result.output.forEach(function (chunk) {
-				if (chunk.code) codeList.push(chunk.code);
-				// if (chunk.map) mapList.push(chunk.map);
-			});
-			return {
-				str: codeList.join('\n'),
-				// map: mapList.join('\n')
-			};
-		});
+	const result = await rollup.rollup({
+		input: bundleName,
+		context: 'window',
+		plugins: [
+			rollupVirtual(virtuals),
+			modulesResolver,
+			rollupResolve.nodeResolve({ browser: true }),
+			rollupCommonjs(),
+			rollupBabel.babel(opts.babel),
+			opts.minify ? rollupTerser.terser({
+				numWorkers: MaxWorkers
+			}) : null
+		]
 	});
+	for (let i = 1; i < result.watchFiles.length; i++) {
+		let item = result.watchFiles[i];
+		if (item.startsWith('\0')) continue;
+		item = Path.toUnix(item);
+		if (coreJsRe.test(item) || item.endsWith("/node_modules/regenerator-runtime/runtime.js")) continue;
+		let rel = Path.relative(docRoot, item);
+		if (!data.scripts.includes(rel)) data.scripts.push(rel);
+	}
+	const { output } = await result.generate({
+		format: 'iife'
+	});
+	const codeList = [];
+	// const mapList = [];
+	output.forEach(function (chunk) {
+		if (chunk.code) codeList.push(chunk.code);
+		// if (chunk.map) mapList.push(chunk.map);
+	});
+	return {
+		str: codeList.join('\n'),
+		// map: mapList.join('\n')
+	};
 }
 
-function processStylesheets(doc, opts, data) {
+async function processStylesheets(doc, opts, data) {
 	let path = opts.basepath;
 	const pathExt = Path.extname(path);
 	const docRoot = Path.dirname(path);
@@ -413,7 +403,7 @@ function processStylesheets(doc, opts, data) {
 	prependToPivot(allLinks, opts.prepend, 'link', 'href', 'css', { rel: "stylesheet" });
 	appendToPivot(allLinks, opts.append, 'link', 'href', 'css', { rel: "stylesheet" });
 
-	return Promise.all(allLinks.map(function (node) {
+	const sheets = await Promise.all(allLinks.map(async function (node) {
 		const src = node.getAttribute('href');
 		let dst = src;
 		if (src) {
@@ -435,9 +425,8 @@ function processStylesheets(doc, opts, data) {
 				return `@import url("${dst}");`;
 			} else if (filterRemotes(dst, opts.remotes) == 1) {
 				data.stylesheets.push(src);
-				return got(dst).then(function (response) {
-					return response.body.toString();
-				});
+				const response = await got(dst);
+				return response.body.toString();
 			}
 		} else if (node.textContent) {
 			if (~opts.ignore.indexOf('.')) {
@@ -449,66 +438,65 @@ function processStylesheets(doc, opts, data) {
 			}
 			return node.textContent;
 		}
-	})).then(function (all) {
-		const blob = all.filter(function (str) {
-			return !!str;
-		}).join("\n");
-		if (!blob) return {};
-		const autoprefixerOpts = {};
-		const urlOpts = [{
+	}));
+
+	const blob = sheets.filter(function (str) {
+		return !!str;
+	}).join("\n");
+	if (!blob) return {};
+	const autoprefixerOpts = {};
+	const urlOpts = [{
+		url(asset) {
+			if (asset.pathname) {
+				const relPath = Path.toUnix(asset.relativePath);
+				if (!data.assets.includes(relPath)) data.assets.push(relPath);
+				return relPath;
+			}
+		},
+		multi: true
+	}];
+
+	if (opts.assets) {
+		const fixRelative = Path.relative(Path.dirname(opts.css || "."), ".");
+		urlOpts.push({
+			url: "copy",
+			useHash: true,
+			assetsPath: opts.assets
+		}, {
 			url(asset) {
-				if (asset.pathname) {
-					const relPath = Path.toUnix(asset.relativePath);
-					if (!data.assets.includes(relPath)) data.assets.push(relPath);
-					return relPath;
-				}
+				if (asset.url) return Path.join(fixRelative, asset.url);
 			},
 			multi: true
-		}];
-
-		if (opts.assets) {
-			const fixRelative = Path.relative(Path.dirname(opts.css || "."), ".");
-			urlOpts.push({
-				url: "copy",
-				useHash: true,
-				assetsPath: opts.assets
-			}, {
-				url(asset) {
-					if (asset.url) return Path.join(fixRelative, asset.url);
-				},
-				multi: true
-			});
-		}
-
-		const plugins = [
-			postcssImport(Object.assign({
-				plugins: [postcssUrl({
-					url: (asset) => {
-						if (asset.pathname) {
-							return Path.toUnix(asset.relativePath);
-						}
-					}
-				})],
-			}, resolverPlugin(opts, "resolve", "css"))),
-			postcssUrl(urlOpts),
-			postcssFlexBugs,
-			autoprefixer(autoprefixerOpts)
-		];
-		if (opts.minify) {
-			plugins.push(csso({
-				comments: false
-			}));
-		}
-		plugins.push(reporter);
-
-		return postcss(plugins).process(blob, {
-			from: path,
-			to: path + '.css',
-			map: false,
-			// {
-			// 	inline: false
-			// }
 		});
+	}
+
+	const plugins = [
+		postcssImport(Object.assign({
+			plugins: [postcssUrl({
+				url: (asset) => {
+					if (asset.pathname) {
+						return Path.toUnix(asset.relativePath);
+					}
+				}
+			})],
+		}, resolverPlugin(opts, "resolve", "css"))),
+		postcssUrl(urlOpts),
+		postcssFlexBugs,
+		autoprefixer(autoprefixerOpts)
+	];
+	if (opts.minify) {
+		plugins.push(csso({
+			comments: false
+		}));
+	}
+	plugins.push(reporter);
+	return postcss(plugins).process(blob, {
+		from: path,
+		to: path + '.css',
+		map: false,
+		// {
+		// 	inline: false
+		// }
 	});
 }
 
@@ -629,38 +617,29 @@ function appendToPivot(scripts, list, tag, att, ext, attrs) {
 	return pivot;
 }
 
-function loadDom(path, basepath) {
+async function loadDom(path, basepath) {
 	if (!basepath) basepath = path;
 	else basepath = Path.join(basepath, Path.basename(path));
-	return readFile(path).then(function (html) {
-		const abspath = Path.resolve(basepath);
-		const dom = new JSDOM(html, {
-			url: `file://${abspath}`
-		});
-		dom.basepath = abspath;
-		return dom;
+	const html = await readFile(path);
+
+	const abspath = Path.resolve(basepath);
+	const dom = new JSDOM(html, {
+		url: `file://${abspath}`
 	});
+	dom.basepath = abspath;
+	return dom;
 }
 
-function readFile(path) {
-	return new Promise(function (resolve, reject) {
-		fs.readFile(path, function (err, buf) {
-			if (err) reject(err);
-			else resolve(buf.toString());
-		});
-	});
+async function readFile(path) {
+	const buf = await fs.readFile(path);
+	return buf.toString();
 }
 
-function writeFile(path, buf) {
-	return new Promise(function (resolve, reject) {
-		mkdirp(Path.dirname(path)).then(function () {
-			fs.writeFile(path, buf, function (err) {
-				if (err) reject(err);
-				else resolve();
-			});
-		}).catch(reject);
-	});
+async function writeFile(path, buf) {
+	await mkdirp(Path.dirname(path));
+	await fs.writeFile(path, buf);
 }
+
 function resolverPlugin({ modulesPrefix = "/", modulesRoot = ".", root = "." }, key, type) {
 	if (!modulesPrefix.startsWith('/')) modulesPrefix = '/' + modulesPrefix;
 	const resolver = new Resolver({
