@@ -4,9 +4,11 @@ const postcss = require('postcss');
 const postcssUrl = require('postcss-url');
 const postcssImport = require('postcss-import');
 const postcssFlexBugs = require('postcss-flexbugs-fixes');
-const presetEnv = require.resolve('@babel/preset-env');
-const autoprefixer = require('autoprefixer');
 const csso = require('postcss-csso');
+const reporter = require('postcss-reporter');
+const autoprefixer = require('autoprefixer');
+
+const presetEnv = require.resolve('@babel/preset-env');
 const rollup = require('rollup');
 const rollupBabel = require('@rollup/plugin-babel');
 const rollupTerser = require('rollup-plugin-terser');
@@ -14,7 +16,7 @@ const rollupVirtual = require('@rollup/plugin-virtual');
 const rollupResolve = require('@rollup/plugin-node-resolve');
 const rollupCommonjs = require('@rollup/plugin-commonjs');
 const Resolver = require('@webmodule/resolve');
-const reporter = require('postcss-reporter');
+
 const JSDOM = require('jsdom').JSDOM;
 const mkdirp = require('mkdirp');
 const MaxWorkers = Math.min(require('os').cpus().length - 1, 4);
