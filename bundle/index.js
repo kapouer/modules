@@ -267,9 +267,9 @@ function processScripts(doc, opts, data) {
 	allScripts.sort(function (a, b) {
 		const am = a.type == "module";
 		const bm = b.type == "module";
-		if (am || bm) defer = true;
 		const ar = a.defer;
 		const br = b.defer;
+		if (am || bm || ar || br) defer = true;
 		if (am && bm) return 0;
 		if (!am && bm) return -1;
 		if (am && !bm) return 1;
