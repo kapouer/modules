@@ -21,10 +21,10 @@
   "homepage": "https://github.com/kapouer/webmodule#readme",
   "dependencies": {
     "@webmodule/resolve": "^5.0.0",
-    "acorn": "^8.1.1",
+    "acorn": "^8.2.1",
     "acorn-class-fields": "^1.0.0",
     "acorn-private-methods": "^1.0.0",
-    "acorn-walk": "^8.0.2",
+    "acorn-walk": "^8.1.0",
     "dashdash": "^2.0.0",
     "express": "^4.17.1",
     "http-errors": "^1.8.0",
