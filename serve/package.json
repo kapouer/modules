@@ -1,6 +1,6 @@
 {
   "name": "@webmodule/serve",
-  "version": "5.2.0-1",
+  "version": "5.2.1",
   "description": "",
   "main": "index.js",
   "scripts": {
