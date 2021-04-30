@@ -69,8 +69,8 @@ class ModuleServer {
 				watching.close();
 				this.cache[relUrl] = null;
 			});
-			// let node exit
-			watching.unref();
+			// let node >= 12.20.0 exit
+			if (watching.unref) watching.unref();
 		}
 		let noneMatch = req.headers["if-none-match"];
 		if (noneMatch && noneMatch.indexOf(cached.headers.etag) > -1) {
