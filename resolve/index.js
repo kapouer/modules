@@ -19,12 +19,15 @@ module.exports = class Resolver {
 		if (!mod) {
 			let dir = upath.join(root, moduleName);
 			if (!dir) return ret;
-			const exports = await pkgExports(dir, type);
-			mod = modules[moduleName] = { exports, dir };
+			mod = modules[moduleName] = {
+				paths: await pkgExports(dir),
+				dir
+			};
 		}
-		if (!mod.exports) return ret;
+		const paths = mod.paths[type];
+		if (!paths) return ret;
 		const relKey = relUrl ? "./" + relUrl : ".";
-		let relPath = mod.exports[relKey] || relKey;
+		let relPath = paths[relKey] || relKey;
 		if (relPath == ".") relPath = "./index"; // last chance
 		if (!upath.extname(relPath)) {
 			relPath += `.${type}`;
@@ -45,31 +48,36 @@ function urlParts(url) {
 	return [name, list.join('/')];
 }
 
-async function pkgExports(dir, type) {
-	const exports = {};
-	let pkg;
+async function getPkg(path) {
 	try {
-		pkg = JSON.parse(await readFile(upath.join(dir, 'package.json')));
+		return JSON.parse(await readFile(path));
 	} catch (err) {
+		console.error(err);
 		return null;
 	}
-	if (type == "css" && pkg.style) {
-		exports["."] = pkg.style;
-	} else if (pkg.exports) {
+}
+
+async function pkgExports(dir) {
+	const pkg = await getPkg(upath.join(dir, 'package.json'));
+	if (!pkg) return {};
+	const paths = { css: {}, js: {} };
+	if (pkg.style) paths.css["."] = pkg.style;
+	if (pkg.exports) {
 		for (let key in pkg.exports) {
 			const exp = pkg.exports[key];
 			if (key == "import") {
-				exports['.'] = exp;
+				paths.js['.'] = exp;
 			} else if (key.startsWith(".")) {
 				if (typeof exp == "object" && exp.import) {
-					exports[key] = exp.import;
+					paths.js[key] = exp.import;
 				} else {
-					exports[key] = exp;
+					paths.js[key] = exp;
 				}
 			}
 		}
 	} else {
-		exports["."] = pkg.module || pkg['jsnext:main'] || pkg.main || null;
+		paths.js["."] = pkg.module || pkg['jsnext:main'] || pkg.main || null;
+		if (!pkg.style) paths.css["."] = pkg.module || pkg.main || null;
 	}
-	return exports;
+	return paths;
 }
