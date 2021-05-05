@@ -651,6 +651,7 @@ function resolverPlugin({ modulesPrefix = "/", modulesRoot = ".", root = "." }, 
 	return {
 		name: "native import modules resolver",
 		async [key](source, importer) {
+			if (!importer) return null;
 			const usource = Path.toUnix(source);
 			let ignore = source.includes('\0') || importer.includes('\0');
 			let importerDir;
