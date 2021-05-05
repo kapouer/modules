@@ -40,6 +40,8 @@ module.exports = function ({ prefix = "/", root = "." } = {}) {
 		const accepts = /\btext\/css\b/.test(req.get('accept') || "*/*") ? "css" : "js";
 		const { url } = await resolver.resolve(reqPath, accepts);
 
+		res.vary('Accept');
+
 		if (url) {
 			if (accepts == "css") {
 				// else browser warns about content-type
