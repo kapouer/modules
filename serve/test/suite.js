@@ -100,6 +100,23 @@ describe("test suite", function () {
 		assert.ok(res.body.includes("animation"));
 	});
 
+	it('should allow same module to export css or js', async function () {
+		const stylesheet = await got(host + '/node_modules/both', {
+			headers: {
+				referer: "/myfile",
+				accept: "text/css,*/*;q=0.1"
+			}
+		});
+		assert.ok(stylesheet.body.includes("animation"));
+		const script = await got(host + '/node_modules/both', {
+			headers: {
+				referer: "/myfile",
+				accept: "*/*"
+			}
+		});
+		assert.ok(script.body.includes("console.log"));
+	});
+
 	it('should support style for css in a subdir next to it', async function () {
 		const res = await got(host + '/node_modules/style/asset/file.txt', {
 			headers: {
