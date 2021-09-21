@@ -98,9 +98,8 @@ async function bundledom(path, opts) {
 		// 	if (opts.cli) console.warn(opts.css + ".map");
 		// }
 	}
-	let html = dom.serialize();
+	const html = dom.serialize();
 	if (opts.html) {
-
 		const htmlPath = getRelativePath(opts.basepath, opts.html);
 		await writeFile(htmlPath, html);
 		// eslint-disable-next-line no-console
