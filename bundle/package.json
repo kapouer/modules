@@ -1,6 +1,6 @@
 {
   "name": "@webmodule/bundle",
-  "version": "5.5.2",
+  "version": "5.5.3",
   "description": "Bundle and transform javascript files, stylesheets, html imports and update DOM document",
   "main": "index.js",
   "scripts": {
@@ -43,7 +43,7 @@
     "@rollup/plugin-node-resolve": "^13.0.4",
     "@rollup/plugin-url": "^6.1.0",
     "@rollup/plugin-virtual": "^2.0.3",
-    "@webmodule/resolve": "^5.0.1",
+    "@webmodule/resolve": "^5.0.2",
     "autoprefixer": "^10.3.4",
     "core-js": "^3.18.0",
     "dashdash": "^2.0.0",
