@@ -1,13 +1,13 @@
 #!/usr/bin/node
 
-var glob = require('glob');
-var Path = require('path');
+const glob = require('glob');
+const Path = require('path');
 
-var bundledom = require('..');
+const bundledom = require('..');
 
-var dash = require('dashdash');
+const dash = require('dashdash');
 
-var parser = dash.createParser({options: [
+const parser = dash.createParser({options: [
 	{
 		names: ['help', 'h'],
 		type: 'bool',
@@ -57,7 +57,7 @@ var parser = dash.createParser({options: [
 	}
 ]});
 
-var opts;
+let opts;
 try {
 	opts = parser.parse(process.argv);
 } catch(e) {
@@ -65,28 +65,28 @@ try {
 	opts = {help: true};
 }
 
-var customPlugin = opts.custom && require(opts.custom);
+const customPlugin = opts.custom && require(opts.custom);
 
-var globPattern = opts._args && opts._args.pop();
+const globPattern = opts._args && opts._args.pop();
 
 if (opts.help || !globPattern) {
-	var help = parser.help({includeEnv: true}).trimRight();
-	console.log(`usage: bundle --ignore myfile-*.html --common common.html **/*.html\n${help}`);
+	const help = parser.help({includeEnv: true}).trimRight();
+	console.warn(`usage: bundle --ignore myfile-*.html --common common.html **/*.html\n${help}`);
 	process.exit(0);
 }
 
-var exclude = [];
-var prepend = [];
-var ignore = opts.filter || [];
+let exclude = [];
+const prepend = [];
+const ignore = opts.filter || [];
 
-var p = Promise.resolve();
+let p = Promise.resolve();
 
 if (opts.common) {
-	var commonBase = Path.join(
+	const commonBase = Path.join(
 		Path.dirname(opts.common),
 		Path.basename(opts.common, Path.extname(opts.common))
 	);
-	var commonOpts = {
+	const commonOpts = {
 		remotes: opts.remotes,
 		js: `${opts.bundles}/${commonBase}.js`,
 		css: `${opts.bundles}/${commonBase}.css`,
@@ -96,37 +96,40 @@ if (opts.common) {
 	};
 	prepend.push(commonOpts.css, commonOpts.js);
 	ignore.push(commonOpts.css, commonOpts.js);
-	p = p.then(function() {
-		return bundledom(Path.join(opts.public, opts.common), commonOpts).then(function(data) {
-			exclude = exclude.concat(data.scripts).concat(data.stylesheets).concat(data.imports);
+	p = p.then(() => {
+		return bundledom(Path.join(opts.public, opts.common), commonOpts).then((data) => {
+			exclude = exclude
+				.concat(data.scripts)
+				.concat(data.stylesheets)
+				.concat(data.imports);
 		});
 	});
 }
 
-p = p.then(function() {
-	return new Promise(function(resolve, reject) {
-		var globIgnores = opts.ignore || [];
+p.then(() => {
+	return new Promise((resolve, reject) => {
+		const globIgnores = opts.ignore || [];
 		globIgnores.push(Path.join(opts.bundles, '**'));
 		if (opts.common) globIgnores.push(opts.common);
 		glob(Path.join(opts.public, globPattern), {
-			ignore: globIgnores.map(function(ign) {
+			ignore: globIgnores.map((ign) => {
 				return Path.join(opts.public, ign);
 			})
-		}, function(err, files) {
+		}, (err, files) => {
 			if (err) reject(err);
 			else resolve(files);
 		});
 	});
-}).then(function(files) {
-	return Promise.all(files.filter(function(file) {
-		console.log(file);
+}).then((files) => {
+	return Promise.all(files.filter((file) => {
+		console.info(file);
 		// useful for debugging
 		// return file == "public/index.html" || file == "public/header.html";
 		return true;
-	}).map(function(file) {
-		var dir = Path.join(opts.bundles, Path.relative(opts.public, Path.dirname(file)));
-		var base = Path.basename(file, '.html');
-		var bdOpts = {
+	}).map((file) => {
+		const dir = Path.join(opts.bundles, Path.relative(opts.public, Path.dirname(file)));
+		const base = Path.basename(file, '.html');
+		const bdOpts = {
 			remotes: opts.remotes,
 			custom: customPlugin,
 			concatenate: opts.concatenate,
@@ -141,8 +144,8 @@ p = p.then(function() {
 		if (dir != opts.bundles) bdOpts.root = opts.public;
 		return bundledom(file, bdOpts);
 	}));
-}).then(function(all) {
-	console.log(`Processed ${all.length} files`);
-}).catch(function(err) {
+}).then((all) => {
+	console.info(`Processed ${all.length} files`);
+}).catch((err) => {
 	console.error(err);
 });

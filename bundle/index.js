@@ -31,8 +31,6 @@ const coreJsRe = /\/core-js\//;
 
 module.exports = bundledom;
 
-/* global document */
-
 async function bundledom(path, opts) {
 	opts = Object.assign({
 		remotes: [],
@@ -87,9 +85,7 @@ async function bundledom(path, opts) {
 			// eslint-disable-next-line no-undef
 			sheet.textContent = CSS;
 			document.head.appendChild(sheet);
-		}.toString().replace('CSS', function () {
-			return JSON.stringify(data.css);
-		}) + ')();';
+		}.toString().replace('CSS', () => JSON.stringify(data.css)) + ')();';
 	} else {
 		const cssPath = getRelativePath(opts.basepath, opts.css);
 		await writeFile(cssPath, data.css);
@@ -166,7 +162,7 @@ async function prepareImports(doc, opts, data) {
 	appendToPivot(allLinks, opts.append, 'link', 'href', 'html', { rel: "import" });
 
 	// the order is not important
-	return Promise.all(allLinks.map(async function (node) {
+	return Promise.all(allLinks.map(async (node) => {
 		let src = node.getAttribute('href');
 		if (filterByName(src, opts.ignore)) {
 			return;
@@ -210,9 +206,7 @@ async function prepareImports(doc, opts, data) {
 			SCRIPT;
 			document._currentScript.ownerDocument = document._currentScript.parentOwner;
 			delete document._currentScript.parentOwner;
-		}.toString().replace("SCRIPT;", function () {
-			return idata.js;
-		});
+		}.toString().replace("SCRIPT;", () => idata.js);
 		iscript = '\n(' + iscript + ')(' +
 			JSON.stringify(idoc.documentElement.innerHTML)
 			+ ');';
@@ -230,7 +224,7 @@ async function processScripts(doc, opts, data) {
 		opts.append.unshift(opts.js);
 		opts.ignore.unshift(opts.js);
 	}
-	const allScripts = Array.from(doc.querySelectorAll('script')).filter(function (node) {
+	const allScripts = Array.from(doc.querySelectorAll('script')).filter((node) => {
 		const src = node.getAttribute('src');
 		if (src && filterRemotes(src, opts.remotes) == 0) return false;
 		return !node.type || node.type == "text/javascript" || node.type == "module";
@@ -241,7 +235,7 @@ async function processScripts(doc, opts, data) {
 	const modulesResolver = resolverPlugin(opts, "resolveId", "js");
 	let defer = false;
 
-	allScripts.sort(function (a, b) {
+	allScripts.sort((a, b) => {
 		const am = a.type == "module";
 		const bm = b.type == "module";
 		const ar = a.defer;
@@ -258,7 +252,7 @@ async function processScripts(doc, opts, data) {
 	});
 	if (opts.js && defer) pivot.nextElementSibling.setAttribute('defer', '');
 	const sources = [];
-	allScripts.forEach(function (node, i) {
+	allScripts.forEach((node) => {
 		const src = node.getAttribute('src');
 		let dst = src;
 		const esm = node.getAttribute('type') == "module";
@@ -307,10 +301,10 @@ async function processScripts(doc, opts, data) {
 				}
 			}
 		} else if (node.textContent) {
-			if (~opts.ignore.indexOf('.')) {
+			if (opts.ignore.indexOf('.') >= 0) {
 				return;
 			}
-			if (~opts.exclude.indexOf('.')) {
+			if (opts.exclude.indexOf('.') >= 0) {
 				removeNodeAndSpaceBefore(node);
 				return;
 			}
@@ -331,17 +325,18 @@ async function processScripts(doc, opts, data) {
 	const entries = await Promise.all(sources);
 	if (entries.length == 0) return {};
 	const virtuals = {};
-	const bundle = entries.map(function (entry, i) {
-		let { src, dst, blob } = entry;
+	const bundle = entries.map((entry, i) => {
+		const { src, dst, blob } = entry;
 		if (src) data.scripts.push(src);
+		let idst = dst;
 		if (blob) {
-			dst = `__script${i}__.js`;
-			virtuals[dst] = blob;
+			idst = `__script${i}__.js`;
+			virtuals[idst] = blob;
 		}
-		if (!dst) {
+		if (!idst) {
 			throw new Error(`Entry ${i} without dst : ${src}`);
 		} else {
-			return `import "${Path.toUnix(dst)}";`;
+			return `import "${Path.toUnix(idst)}";`;
 		}
 	}).join('\n');
 	const bundleName = '__entry__.js';
@@ -366,7 +361,7 @@ async function processScripts(doc, opts, data) {
 		if (item.startsWith('\0')) continue;
 		item = Path.toUnix(item);
 		if (coreJsRe.test(item) || item.endsWith("/node_modules/regenerator-runtime/runtime.js")) continue;
-		let rel = Path.relative(docRoot, item);
+		const rel = Path.relative(docRoot, item);
 		if (!data.scripts.includes(rel)) data.scripts.push(rel);
 	}
 	const { output } = await result.generate({
@@ -374,7 +369,7 @@ async function processScripts(doc, opts, data) {
 	});
 	const codeList = [];
 	// const mapList = [];
-	output.forEach(function (chunk) {
+	output.forEach((chunk) => {
 		if (chunk.code) codeList.push(chunk.code);
 		// if (chunk.map) mapList.push(chunk.map);
 	});
@@ -394,7 +389,7 @@ async function processStylesheets(doc, opts, data) {
 		opts.ignore.unshift(opts.css);
 	}
 
-	const allLinks = Array.from(doc.querySelectorAll('link[href][rel="stylesheet"],style')).filter(function (node) {
+	const allLinks = Array.from(doc.querySelectorAll('link[href][rel="stylesheet"],style')).filter((node) => {
 		const src = node.getAttribute('href');
 		if (src && filterRemotes(src, opts.remotes) == 0) return false;
 		return true;
@@ -403,7 +398,7 @@ async function processStylesheets(doc, opts, data) {
 	prependToPivot(allLinks, opts.prepend, 'link', 'href', 'css', { rel: "stylesheet" });
 	appendToPivot(allLinks, opts.append, 'link', 'href', 'css', { rel: "stylesheet" });
 
-	const sheets = await Promise.all(allLinks.map(async function (node) {
+	const sheets = await Promise.all(allLinks.map(async (node) => {
 		const src = node.getAttribute('href');
 		let dst = src;
 		if (src) {
@@ -429,20 +424,18 @@ async function processStylesheets(doc, opts, data) {
 				return response.body.toString();
 			}
 		} else if (node.textContent) {
-			if (~opts.ignore.indexOf('.')) {
+			if (opts.ignore.indexOf('.') >= 0) {
 				return "";
 			}
 			removeNodeAndSpaceBefore(node);
-			if (~opts.exclude.indexOf('.')) {
+			if (opts.exclude.indexOf('.') >= 0) {
 				return "";
 			}
 			return node.textContent;
 		}
 	}));
 
-	const blob = sheets.filter(function (str) {
-		return !!str;
-	}).join("\n");
+	const blob = sheets.filter((str) => Boolean(str)).join("\n");
 	if (!blob) return {};
 	const autoprefixerOpts = {};
 	const urlOpts = [{
@@ -520,7 +513,7 @@ function filterRemotes(src, remotes) {
 	const host = new URL(src, "a://").host;
 	if (!host) return -1;
 	if (!remotes) return 0;
-	if (remotes.some(function (rem) {
+	if (remotes.some((rem) => {
 		if (host.indexOf(rem) >= 0) return true;
 	})) return 1;
 	else return 0;
@@ -528,10 +521,10 @@ function filterRemotes(src, remotes) {
 
 function filterByName(src, list) {
 	if (!list) return;
-	const found = list.some(function (str) {
+	const found = list.some((str) => {
 		if (str == ".") return false;
 		if (str.indexOf('*') >= 0) return minimatch(src, str);
-		else return ~src.indexOf(str);
+		else return src.indexOf(str) >= 0;
 	});
 	if (found) debug("excluded", src);
 	return found;
@@ -540,7 +533,7 @@ function filterByName(src, list) {
 function filterByExt(list, ext) {
 	if (!list) return [];
 	ext = '.' + ext;
-	return list.filter(function (src) {
+	return list.filter((src) => {
 		return Path.extname(new URL(src, "a://").pathname) == ext;
 	});
 }
@@ -575,7 +568,7 @@ function spaceBefore(node) {
 
 function createSibling(refnode, direction, tag, attrs) {
 	const node = refnode.ownerDocument.createElement(tag);
-	if (attrs) for (let name in attrs) node.setAttribute(name, attrs[name]);
+	if (attrs) for (const name in attrs) node.setAttribute(name, attrs[name]);
 	refnode[direction](node);
 	refnode[direction](spaceBefore(refnode));
 	return node;
@@ -591,7 +584,7 @@ function prependToPivot(scripts, list, tag, att, ext, attrs) {
 		return;
 	}
 	attrs = Object.assign({}, attrs);
-	list.forEach(function (src) {
+	list.forEach((src) => {
 		attrs[att] = src;
 		scripts.unshift(createSibling(pivot, 'before', tag, attrs));
 		debug("prepended", tag, att, src);

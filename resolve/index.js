@@ -12,12 +12,12 @@ module.exports = class Resolver {
 		const ret = {};
 		if (!url.startsWith(prefix)) return ret;
 		url = url.substring(prefix.length);
-		let [moduleName, relUrl] = urlParts(url);
+		const [moduleName, relUrl] = urlParts(url);
 		if (!moduleName) return ret;
 		let mod = modules[moduleName];
 
 		if (!mod) {
-			let dir = upath.join(root, moduleName);
+			const dir = upath.join(root, moduleName);
 			if (!dir) return ret;
 			mod = modules[moduleName] = {
 				paths: await pkgExports(dir),
@@ -63,7 +63,7 @@ async function pkgExports(dir) {
 	const paths = { css: {}, js: {} };
 	if (pkg.style) paths.css["."] = pkg.style;
 	if (pkg.exports) {
-		for (let key in pkg.exports) {
+		for (const key in pkg.exports) {
 			const exp = pkg.exports[key];
 			if (key == "import") {
 				paths.js['.'] = exp;

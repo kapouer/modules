@@ -32,7 +32,7 @@
     "upath": "^2.0.1"
   },
   "devDependencies": {
-    "@kapouer/eslint-config": "^1.2.1",
+    "@kapouer/eslint-config": "^1.6.0",
     "got": "^11.8.2",
     "mocha": "^8.3.2"
   },
