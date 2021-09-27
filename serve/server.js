@@ -103,8 +103,8 @@ class ModuleServer {
 		let ast;
 		try {
 			ast = MyParser.parse(code, { sourceType: "module", ecmaVersion: "latest" });
-		} catch (error) {
-			return { error: error.toString() };
+		} catch (err) {
+			return { error: err.toString() + " in " + basePath };
 		}
 		let isModule = false;
 		let isCommonjs = false;
