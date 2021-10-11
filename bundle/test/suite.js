@@ -298,7 +298,9 @@ describe("test suite", function () {
 });
 
 async function copyOver(from, to) {
-	await fs.unlink(to);
+	try {
+		await fs.unlink(to);
+	} catch(ex) {}
 	const data = await fs.readFile(from);
 	await mkdirp(Path.dirname(to));
 	await fs.writeFile(to, data);
