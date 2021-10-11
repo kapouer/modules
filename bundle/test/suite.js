@@ -9,7 +9,7 @@ const bundledom = require('..');
 describe("test suite", function () {
 	this.timeout(10000);
 
-	it('should do the most simplest basic js test', async function () {
+	it('should do the most simplest basic js test', async () => {
 		process.env.BROWSERSLIST = "ie >= 8";
 		try {
 			const data = await bundledom('test/fixtures/basic.html', {
@@ -26,7 +26,7 @@ describe("test suite", function () {
 		}
 	});
 
-	it('should concat js for legacy scripts', async function () {
+	it('should concat js for legacy scripts', async () => {
 		const data = await bundledom('test/fixtures/concat.html', {
 			exclude: [],
 			concatenate: true
@@ -36,7 +36,7 @@ describe("test suite", function () {
 		data.should.have.property('html');
 	});
 
-	it('should work without anything to do', async function () {
+	it('should work without anything to do', async () => {
 		const data = await bundledom('test/fixtures/none.html', {
 			exclude: []
 		});
@@ -45,7 +45,7 @@ describe("test suite", function () {
 		data.should.have.property('html');
 	});
 
-	it('should support es modules', async function () {
+	it('should support es modules', async () => {
 		const data = await bundledom('test/fixtures/esm.html', {
 			exclude: [],
 			concatenate: true
@@ -57,7 +57,7 @@ describe("test suite", function () {
 		data.should.have.property('html');
 	});
 
-	it('should support es modules with browser prefix resolver', async function () {
+	it('should support es modules with browser prefix resolver', async () => {
 		const data = await bundledom('test/fixtures/esm-browser.html', {
 			modulesPrefix: '/',
 			modulesRoot: "test",
@@ -74,7 +74,7 @@ describe("test suite", function () {
 		data.should.have.property('html');
 	});
 
-	it('should support legacy-resolved modules', async function () {
+	it('should support legacy-resolved modules', async () => {
 		process.env.BROWSERSLIST = "last 1 chrome version";
 		try {
 			const data = await bundledom('test/fixtures/legacy.html', {
@@ -95,7 +95,7 @@ describe("test suite", function () {
 		}
 	});
 
-	it('should support legacy-resolved jquery-like with ignored file', async function () {
+	it('should support legacy-resolved jquery-like with ignored file', async () => {
 		process.env.BROWSERSLIST = "last 1 chrome version";
 		try {
 			const data = await bundledom('test/fixtures/legacy2.html', {
@@ -114,7 +114,7 @@ describe("test suite", function () {
 		}
 	});
 
-	it('should order scripts w.r.t. defer, module, or nothing', async function () {
+	it('should order scripts w.r.t. defer, module, or nothing', async () => {
 		process.env.BROWSERSLIST = "last 1 chrome version";
 		try {
 			const data = await bundledom('test/fixtures/legacy3.html', {
@@ -136,7 +136,7 @@ describe("test suite", function () {
 		}
 	});
 
-	it('should ignore a script', async function () {
+	it('should ignore a script', async () => {
 		const data = await bundledom('test/fixtures/exclude.html', {
 			ignore: ['b.js']
 		});
@@ -146,7 +146,7 @@ describe("test suite", function () {
 		data.html.indexOf('<script src="b.js"></script>').should.be.greaterThan(0);
 	});
 
-	it('should ignore a script using a wildcard', async function () {
+	it('should ignore a script using a wildcard', async () => {
 		const data = await bundledom('test/fixtures/exclude.html', {
 			ignore: ['*.js']
 		});
@@ -156,7 +156,7 @@ describe("test suite", function () {
 		data.html.indexOf('<script src="b.js"></script>').should.be.greaterThan(0);
 	});
 
-	it('should bundle html import and run it', async function () {
+	it('should bundle html import and run it', async () => {
 		const filepath = 'test/fixtures/import.html';
 		const data = await bundledom(filepath);
 		data.should.have.property('js');
@@ -167,7 +167,7 @@ describe("test suite", function () {
 		should.exist(doc.querySelector('body > .element'));
 	});
 
-	it('should bundle html import in html import and run it', async function () {
+	it('should bundle html import in html import and run it', async () => {
 		const filepath = 'test/fixtures/import-in-import.html';
 		const data = await bundledom(filepath);
 		data.should.have.property('js');
@@ -178,7 +178,7 @@ describe("test suite", function () {
 		should.exist(doc.querySelector('body > .element'));
 	});
 
-	it('should bundle imported element with inner imported element and run it', async function () {
+	it('should bundle imported element with inner imported element and run it', async () => {
 		const filepath = 'test/fixtures/element-in-element.html';
 		const data = await bundledom(filepath);
 		data.should.have.property('js');
@@ -191,7 +191,7 @@ describe("test suite", function () {
 		doc.querySelector('body > .element').innerHTML.should.match(/test1\n\s+test2/);
 	});
 
-	it('should bundle html import with sub import from another dir', async function () {
+	it('should bundle html import with sub import from another dir', async () => {
 		await Promise.all([
 			copyOver('test/fixtures/sub/sub.html', 'test/bundles/sub/sub.html'),
 			copyOver('test/fixtures/sub/sub.js', 'test/bundles/sub/sub.js'),
@@ -209,7 +209,7 @@ describe("test suite", function () {
 		str.should.match(/.*mysubselector.*/);
 	});
 
-	it('should not bundle remotes', async function () {
+	it('should not bundle remotes', async () => {
 		const data = await bundledom('test/fixtures/remote.html', {
 			root: 'test/bundles',
 			html: 'remote.html',
@@ -263,7 +263,7 @@ describe("test suite", function () {
 		await fs.stat("test/bundles/assets/68a581f6.ttf");
 	});
 
-	it('should import jquery-like bundle with side effects', async function () {
+	it('should import jquery-like bundle with side effects', async () => {
 		const data = await bundledom('test/fixtures/fakejquery.html', {
 			concatenate: true
 		});
@@ -271,7 +271,7 @@ describe("test suite", function () {
 		data.js.should.containEql("window.$()");
 	});
 
-	it('should resolve org modules', async function () {
+	it('should resolve org modules', async () => {
 		const data = await bundledom('test/fixtures/orgmodule.html', {
 			concatenate: true,
 			modulesRoot: "test"
@@ -298,9 +298,7 @@ describe("test suite", function () {
 });
 
 async function copyOver(from, to) {
-	try {
-		await fs.unlink(to);
-	} catch(ex) {}
+	try { await fs.unlink(to); } catch(ex) { /* pass */ }
 	const data = await fs.readFile(from);
 	await mkdirp(Path.dirname(to));
 	await fs.writeFile(to, data);
@@ -308,7 +306,7 @@ async function copyOver(from, to) {
 
 async function runDom(htmlPath, data) {
 	const virtualConsole = new jsdom.VirtualConsole();
-	virtualConsole.on('jsdomError', function (err) {
+	virtualConsole.on('jsdomError', (err) => {
 		throw err;
 	});
 	const dom = new jsdom.JSDOM(data.html, {

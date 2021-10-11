@@ -92,7 +92,7 @@ const htmlInputPath = opts._args && opts._args.pop();
 
 if (opts.help || !htmlInputPath || !require('fs').existsSync(htmlInputPath)) {
 	const help = parser.help({includeEnv: true}).trimRight();
-	console.log(`usage: webmodule-bundle [opts] <html file path>\n${help}`);
+	console.info(`usage: webmodule-bundle [opts] <html file path>\n${help}`);
 	process.exit(0);
 }
 
@@ -100,9 +100,9 @@ const bundledom = require('..');
 
 opts.cli = true;
 
-bundledom(htmlInputPath, opts).then(function(data) {
-	if (!opts.js) console.log(data.js);
-}).catch(function(err) {
+bundledom(htmlInputPath, opts).then((data) => {
+	if (!opts.js) console.info(data.js);
+}).catch((err) => {
 	console.error(err);
 	process.exit(1);
 });
