@@ -348,7 +348,9 @@ async function processScripts(doc, opts, data) {
 			rollupVirtual(virtuals),
 			modulesResolver,
 			rollupResolve.nodeResolve({ browser: true }),
-			rollupCommonjs(),
+			rollupCommonjs({
+				ignoreTryCatch: false
+			}),
 			rollupBabel.babel(opts.babel),
 			opts.minify ? rollupTerser.terser({
 				numWorkers: MaxWorkers
