@@ -8,21 +8,24 @@ describe("test suite", function () {
 	this.timeout(10000);
 	let server, host;
 
-	before(function (done) {
+	before((done) => {
 		const app = express();
 
-		app.use(serveModule({ prefix: '/', root: "test" }));
+		app.use(serveModule({
+			prefix: '/',
+			root: "test"
+		}));
 
 		server = app.listen(() => {
 			host = `http://localhost:${server.address().port}`;
 			done();
 		});
 	});
-	after(function (done) {
+	after((done) => {
 		server.close(done);
 	});
 
-	it('should redirect module with main field', async function () {
+	it('should redirect module with main field', async () => {
 		const res = await got(host + '/node_modules/redirect-main', {
 			followRedirect: false,
 			headers: {
@@ -76,7 +79,7 @@ describe("test suite", function () {
 		);
 	});
 
-	it('should reexport global module', async function () {
+	it('should reexport global module', async () => {
 		const res = await got(host + '/node_modules/reexport/index.js', {
 			headers: {
 				referer: "/mymodule.js",
@@ -86,7 +89,7 @@ describe("test suite", function () {
 		assert.ok(res.body.startsWith("const module = {exports: {}};const exports = module.exports;"));
 	});
 
-	it('should not reexport global module', async function () {
+	it('should not reexport global module', async () => {
 		const res = await got(host + '/node_modules/noreexport/index.js', {
 			headers: {
 				referer: "/mymodule.js",
@@ -96,7 +99,7 @@ describe("test suite", function () {
 		assert.ok(!res.body.startsWith("const module = {exports: {}};const exports = module.exports;"));
 	});
 
-	it('should leave file untouched because referer is not js', async function () {
+	it('should leave file untouched because referer is not js', async () => {
 		const res = await got(host + '/node_modules/reexport/index.js', {
 			headers: {
 				referer: "/myfile",
@@ -106,7 +109,7 @@ describe("test suite", function () {
 		assert.ok(!res.body.startsWith("const module = {exports: {}};const exports = module.exports;"));
 	});
 
-	it('should redirect in subdir without loop', async function () {
+	it('should redirect in subdir without loop', async () => {
 		const res = await got(host + '/node_modules/redirect-loop', {
 			headers: {
 				referer: "/myfile",
@@ -116,7 +119,7 @@ describe("test suite", function () {
 		assert.ok(res.body.includes("default toto"));
 	});
 
-	it('should support style for css', async function () {
+	it('should support style for css', async () => {
 		const res = await got(host + '/node_modules/style', {
 			headers: {
 				referer: "/myfile",
@@ -126,7 +129,7 @@ describe("test suite", function () {
 		assert.ok(res.body.includes("animation"));
 	});
 
-	it('should allow same module to export css or js', async function () {
+	it('should allow same module to export css or js', async () => {
 		const stylesheet = await got(host + '/node_modules/both', {
 			headers: {
 				referer: "/myfile",
@@ -143,7 +146,7 @@ describe("test suite", function () {
 		assert.ok(script.body.includes("console.log"));
 	});
 
-	it('should support style for css in a subdir next to it', async function () {
+	it('should support style for css in a subdir next to it', async () => {
 		const res = await got(host + '/node_modules/style/asset/file.txt', {
 			headers: {
 				referer: "/node_modules/style/css/index.css",
@@ -153,7 +156,7 @@ describe("test suite", function () {
 		assert.ok(res.body.includes("some text"));
 	});
 
-	it('should return 404 when there is not module', async function () {
+	it('should return 404 when there is not module', async () => {
 		assert.strictEqual(await got(host + '/node_modules/inexistent', {
 			headers: {
 				referer: "/myfile"
@@ -161,7 +164,7 @@ describe("test suite", function () {
 		}).catch(err => err.response.statusCode), 404);
 	});
 
-	it('should return 404 when module has nothing to export', async function () {
+	it('should return 404 when module has nothing to export', async () => {
 		assert.strictEqual(await got(host + '/node_modules/nothing', {
 			headers: {
 				referer: "/myfile",

@@ -30,7 +30,7 @@ class ModuleServer {
 
 	handleRequest(req, res) {
 		const send = (status, text, headers) => {
-			let hds = {};
+			const hds = {};
 			if (!headers || typeof headers == "string") {
 				hds["content-type"] = headers || "text/plain";
 			} else {
@@ -39,7 +39,7 @@ class ModuleServer {
 			res.writeHead(status, hds);
 			res.end(text);
 		};
-		let url = new URL(req.baseUrl + req.url, "http://localhost");
+		const url = new URL(req.baseUrl + req.url, "http://localhost");
 		if (url.pathname.startsWith(this.prefix) == false) return false;
 		// Modules paths in URLs represent "up one directory" as "__".
 		// Convert them to ".." for filesystem path resolution.
@@ -50,7 +50,7 @@ class ModuleServer {
 				send(403, "Access denied");
 				return true;
 			}
-			let fullPath = resolve(this.root, relUrl);
+			const fullPath = resolve(this.root, relUrl);
 			let code;
 			try {
 				code = fs.readFileSync(fullPath, "utf8");
@@ -61,19 +61,19 @@ class ModuleServer {
 			if (/\.map$/.test(fullPath)) {
 				cached = this.cache[relUrl] = new Cached(code, "application/json");
 			} else {
-				let { code: resolvedCode, error } = this.resolveImports(fullPath, code);
+				const { code: resolvedCode, error } = this.resolveImports(fullPath, code);
 				if (error) throw error;
 				cached = this.cache[relUrl] = new Cached(resolvedCode, "application/javascript");
 			}
 			// Drop cache entry when the file changes.
-			let watching = fs.watch(fullPath, () => {
+			const watching = fs.watch(fullPath, () => {
 				watching.close();
 				this.cache[relUrl] = null;
 			});
 			// let node >= 12.20.0 exit
 			if (watching.unref) watching.unref();
 		}
-		let noneMatch = req.headers["if-none-match"];
+		const noneMatch = req.headers["if-none-match"];
 		if (noneMatch && noneMatch.indexOf(cached.headers.etag) > -1) {
 			send(304, null);
 			return true;
@@ -151,9 +151,9 @@ class ModuleServer {
 			},
 			VariableDeclaration: node => {
 				if (!node.declarations) return;
-				let reqs = [];
+				const reqs = [];
 				let noreqs = 0;
-				for (let decl of node.declarations) {
+				for (const decl of node.declarations) {
 					if (!decl.init || decl.init.type != "CallExpression" || !decl.init.callee || decl.init.callee.name != "require") {
 						noreqs++;
 						continue;
@@ -206,7 +206,7 @@ class ModuleServer {
 					+ 'export default module.exports'
 			});
 		}
-		for (let patch of patches.sort((a, b) => b.from - a.from)) {
+		for (const patch of patches.sort((a, b) => b.from - a.from)) {
 			code = code.slice(0, patch.from) + patch.text + code.slice(patch.to);
 		}
 		return { code };
@@ -236,13 +236,14 @@ function dash(path) { return path.replace(/(^|\/)\.\.(?=$|\/)/g, "$1__"); }
 function undash(path) { return path.replace(/(^|\/)__(?=$|\/)/g, "$1.."); }
 
 function hash(str) {
-	let sum = crypto.createHash("sha1");
+	const sum = crypto.createHash("sha1");
 	sum.update(str);
 	return sum.digest("hex");
 }
 
 function countParentRefs(path) {
-	let re = /(^|\/)\.\.(?=\/|$)/g, count = 0;
+	const re = /(^|\/)\.\.(?=\/|$)/g;
+	let count = 0;
 	while (re.exec(path)) count++;
 	return count;
 }
