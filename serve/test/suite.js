@@ -36,7 +36,33 @@ describe("test suite", function () {
 		);
 	});
 
-	it('should redirect module with exports field', async function () {
+	it('should redirect module with custom field', async () => {
+		const res = await got(host + '/node_modules/redirect-custom', {
+			followRedirect: true,
+			headers: {
+				referer: "/mymodule.js",
+				accept: "*/*"
+			}
+		});
+		assert.strictEqual(
+			res.body,
+			'import * as Test from "redirect-fixed";\nconsole.log(Test.value);\n'
+		);
+
+		const res2 = await got(host + '/node_modules/redirect-fixed', {
+			followRedirect: true,
+			headers: {
+				referer: "/node_modules/redirect-custom/src/index.js",
+				accept: "*/*"
+			}
+		});
+		assert.strictEqual(
+			res2.body,
+			'const module = {exports: {}};const exports = module.exports;exports.value = 1;\n;export default module.exports'
+		);
+	});
+
+	it('should redirect module with exports field', async () => {
 		const res = await got(host + '/node_modules/redirect-exports', {
 			followRedirect: false,
 			headers: {
