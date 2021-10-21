@@ -49,7 +49,7 @@ describe("test suite", function () {
 		});
 		assert.strictEqual(
 			res.body,
-			'import * as Test from "redirect-fixed";\nconsole.log(Test.value);\n'
+			'import * as Test from "/node_modules/redirect-fixed/src/test.js";\nconsole.log(Test.value);\n'
 		);
 
 		const res2 = await got(host + '/node_modules/redirect-fixed', {
