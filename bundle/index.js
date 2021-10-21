@@ -29,9 +29,9 @@ const minimatch = require("minimatch");
 
 const coreJsRe = /\/core-js\//;
 
-module.exports = bundledom;
+module.exports = bundle;
 
-async function bundledom(path, opts) {
+async function bundle(path, opts) {
 	opts = Object.assign({
 		remotes: [],
 		prepend: [],
@@ -324,7 +324,7 @@ async function processScripts(doc, opts, data) {
 	const entries = await Promise.all(sources);
 	if (entries.length == 0) return {};
 	const virtuals = {};
-	const bundle = entries.map((entry, i) => {
+	const bundleStr = entries.map((entry, i) => {
 		const { src, dst, blob } = entry;
 		if (src) data.scripts.push(src);
 		let idst = dst;
@@ -339,7 +339,7 @@ async function processScripts(doc, opts, data) {
 		}
 	}).join('\n');
 	const bundleName = '__entry__.js';
-	virtuals[bundleName] = bundle;
+	virtuals[bundleName] = bundleStr;
 
 	const result = await rollup.rollup({
 		input: bundleName,

@@ -3,7 +3,7 @@
 const glob = require('glob');
 const Path = require('path');
 
-const bundledom = require('..');
+const bundle = require('..');
 
 const dash = require('dashdash');
 
@@ -97,7 +97,7 @@ if (opts.common) {
 	prepend.push(commonOpts.css, commonOpts.js);
 	ignore.push(commonOpts.css, commonOpts.js);
 	p = p.then(() => {
-		return bundledom(Path.join(opts.public, opts.common), commonOpts).then((data) => {
+		return bundle(Path.join(opts.public, opts.common), commonOpts).then((data) => {
 			exclude = exclude
 				.concat(data.scripts)
 				.concat(data.stylesheets)
@@ -142,7 +142,7 @@ p.then(() => {
 			cli: true
 		};
 		if (dir != opts.bundles) bdOpts.root = opts.public;
-		return bundledom(file, bdOpts);
+		return bundle(file, bdOpts);
 	}));
 }).then((all) => {
 	console.info(`Processed ${all.length} files`);

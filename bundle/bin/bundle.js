@@ -96,11 +96,11 @@ if (opts.help || !htmlInputPath || !require('fs').existsSync(htmlInputPath)) {
 	process.exit(0);
 }
 
-const bundledom = require('..');
+const bundle = require('..');
 
 opts.cli = true;
 
-bundledom(htmlInputPath, opts).then((data) => {
+bundle(htmlInputPath, opts).then((data) => {
 	if (!opts.js) console.info(data.js);
 }).catch((err) => {
 	console.error(err);
