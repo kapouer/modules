@@ -38,23 +38,28 @@ module.exports = function ({ prefix = "/", root = ".", modules = {} } = {}) {
 		}
 
 		const accepts = /\btext\/css\b/.test(req.get('accept') || "*/*") ? "css" : "js";
-		const { url } = await resolver.resolve(reqPath, accepts);
+		try {
+			const { url } = await resolver.resolve(reqPath, accepts);
 
-		res.vary('Accept');
+			res.vary('Accept');
 
-		if (url) {
-			if (accepts == "css") {
-				// else browser warns about content-type
-				res.location(url);
-				res.status(302);
-				res.type('text/css');
-				res.end();
+			if (url) {
+				if (accepts == "css") {
+					// else browser warns about content-type
+					res.location(url);
+					res.status(302);
+					res.type('text/css');
+					res.end();
+				} else {
+					res.redirect(url);
+				}
 			} else {
-				res.redirect(url);
+				req.url = reqPath;
+				serveHandler(req, res, next);
 			}
-		} else {
-			req.url = reqPath;
-			serveHandler(req, res, next);
+		} catch (err) {
+			console.error(err);
+			return next(err);
 		}
 	};
 };
