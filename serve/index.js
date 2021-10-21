@@ -4,7 +4,7 @@ const Resolver = require('@webmodule/resolve');
 const ModuleServer = require("./server");
 const HttpError = require('http-errors');
 
-module.exports = function ({ prefix = "/", root = "." } = {}) {
+module.exports = function ({ prefix = "/", root = ".", modules = {} } = {}) {
 	const serveHandler = serveStatic(root, {
 		index: false,
 		redirect: false,
@@ -12,8 +12,8 @@ module.exports = function ({ prefix = "/", root = "." } = {}) {
 		fallthrough: false
 	});
 	const reqPrefix = path.join(prefix, "node_modules", "/");
-	const moduleServer = new ModuleServer({ prefix, root });
-	const resolver = new Resolver({ prefix, root });
+	const resolver = new Resolver({ prefix, root, modules });
+	const moduleServer = new ModuleServer({ prefix, root, modules });
 
 	return async function serveModule(req, res, next) {
 		const reqPath = req.baseUrl + req.path;

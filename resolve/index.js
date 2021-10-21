@@ -1,9 +1,10 @@
 const { readFile } = require('fs').promises;
 const upath = require('upath');
+const PKGKEY = "@webmodule/resolve";
 
 module.exports = class Resolver {
-	constructor({ prefix = "/", root = "." }) {
-		this.modules = {};
+	constructor({ prefix = "/", root = ".", modules = {} }) {
+		this.modules = modules;
 		this.root = upath.resolve(root, "node_modules");
 		this.prefix = prefix + "node_modules/";
 	}
@@ -15,16 +16,11 @@ module.exports = class Resolver {
 		const [moduleName, relUrl] = urlParts(url);
 		if (!moduleName) return ret;
 		let mod = modules[moduleName];
-
+		const dir = upath.join(root, moduleName);
 		if (!mod) {
-			const dir = upath.join(root, moduleName);
-			if (!dir) return ret;
-			mod = modules[moduleName] = {
-				paths: await pkgExports(dir),
-				dir
-			};
+			mod = modules[moduleName] = await pkgExports(dir, modules);
 		}
-		const paths = mod.paths[type];
+		const paths = mod[type];
 		if (!paths) return ret;
 		const relKey = relUrl ? "./" + relUrl : ".";
 		let relPath = paths[relKey] || relKey;
@@ -34,7 +30,7 @@ module.exports = class Resolver {
 		}
 
 		const newUrl = upath.join(moduleName, relPath);
-		ret.path = upath.join(mod.dir, relPath);
+		ret.path = upath.join(dir, relPath);
 		if (url != newUrl) ret.url = this.prefix + newUrl;
 		return ret;
 	}
@@ -57,9 +53,23 @@ async function getPkg(path) {
 	}
 }
 
-async function pkgExports(dir) {
+function importConf(obj) {
+	let conf = {};
+	if (typeof obj == "string") conf.js = { ".": obj };
+	else if (obj.js || obj.css) conf = obj;
+	else conf.js = obj;
+	return conf;
+}
+
+async function pkgExports(dir, modules) {
 	const pkg = await getPkg(upath.join(dir, 'package.json'));
 	if (!pkg) return {};
+	for (const [mod, conf] of Object.entries(pkg[PKGKEY] || {})) {
+		if (!modules[mod]) {
+			modules[mod] = importConf(conf);
+		}
+	}
+
 	const paths = { css: {}, js: {} };
 	if (pkg.style) paths.css["."] = pkg.style;
 	if (pkg.exports) {

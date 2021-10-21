@@ -20,7 +20,8 @@ class Cached {
 }
 
 class ModuleServer {
-	constructor({ prefix = "/", root = ".", maxDepth }) {
+	constructor({ prefix = "/", root = ".", maxDepth, modules }) {
+		this.modules = modules;
 		this.maxDepth = maxDepth == null ? 1 : maxDepth;
 		this.prefix = join(prefix, "node_modules", "/");
 		this.root = resolve(root, "node_modules");
@@ -85,13 +86,13 @@ class ModuleServer {
 	// the module's file exists.
 	resolveModule(basePath, path) {
 		let resolved;
-		try { resolved = resolveMod(path, basePath); }
+		try { resolved = this.resolveMod(path, basePath); }
 		catch (e) { return { error: e.toString() }; }
 
 		// Builtin modules resolve to strings like "fs". Try again with
 		// slash which makes it possible to locally install an equivalent.
 		if (resolved.indexOf("/") == -1) {
-			try { resolved = resolveMod(path + "/", basePath); }
+			try { resolved = this.resolveMod(path + "/", basePath); }
 			catch (e) { return { error: e.toString() }; }
 		}
 
@@ -112,8 +113,8 @@ class ModuleServer {
 		const patchSrc = (node) => {
 			isModule = true;
 			if (!node.source) return;
-			let orig = (0, eval)(code.slice(node.source.start, node.source.end));
-			let { error, path } = this.resolveModule(dirname(basePath), orig);
+			const orig = (0, eval)(code.slice(node.source.start, node.source.end));
+			const { error, path } = this.resolveModule(dirname(basePath), orig);
 			if (error) return { error };
 			patches.push({
 				from: node.source.start,
@@ -130,7 +131,7 @@ class ModuleServer {
 			ImportExpression: node => {
 				isModule = true;
 				if (node.source.type == "Literal") {
-					let { error, path } = this.resolveModule(
+					const { error, path } = this.resolveModule(
 						dirname(basePath), node.source.value
 					);
 					if (!error) {
@@ -210,21 +211,29 @@ class ModuleServer {
 		}
 		return { code };
 	}
+
+	packageFilter(pkg) {
+		const mod = this.modules[pkg.name];
+		if (mod && mod.js && mod.js['.']) {
+			pkg.main = mod.js['.'];
+		} else if (pkg.module) {
+			pkg.main = pkg.module;
+		} else if (pkg['jsnext:main']) {
+			pkg.main = pkg.jsnext;
+		}
+		return pkg;
+	}
+	resolveMod(path, base) {
+		return nodeResolve.sync(path, {
+			basedir: base,
+			packageFilter: (pkg) => this.packageFilter(pkg)
+		});
+	}
 }
 module.exports = ModuleServer;
 
 function dash(path) { return path.replace(/(^|\/)\.\.(?=$|\/)/g, "$1__"); }
 function undash(path) { return path.replace(/(^|\/)__(?=$|\/)/g, "$1.."); }
-
-function packageFilter(pkg) {
-	if (pkg.module) pkg.main = pkg.module;
-	else if (pkg.jnext) pkg.main = pkg.jsnext;
-	return pkg;
-}
-
-function resolveMod(path, base) {
-	return nodeResolve.sync(path, { basedir: base, packageFilter });
-}
 
 function hash(str) {
 	let sum = crypto.createHash("sha1");
