@@ -101,6 +101,7 @@ and `opts` has these properties:
 * modulesPrefix: the mount path for resolving node_modules (<modules> becomes <modules>/node_modules/xxx/index.js), defaults to "/".
 * modulesRoot: where node modules are to be found. Defaults to ".".
 * assets: if set, copy stylesheets assets to this path relative to root.
+* analyze: boolean, get information about bundle
 
 Strings are matched simply by searching a substring.
 

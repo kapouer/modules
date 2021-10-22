@@ -15,6 +15,7 @@ const rollupTerser = require('rollup-plugin-terser');
 const rollupVirtual = require('@rollup/plugin-virtual');
 const rollupResolve = require('@rollup/plugin-node-resolve');
 const rollupCommonjs = require('@rollup/plugin-commonjs');
+const rollupAnalyze = require('rollup-plugin-analyzer');
 const Resolver = require('@webmodule/resolve');
 
 const JSDOM = require('jsdom').JSDOM;
@@ -341,21 +342,24 @@ async function processScripts(doc, opts, data) {
 	const bundleName = '__entry__.js';
 	virtuals[bundleName] = bundleStr;
 
+	const plugins = [
+		rollupVirtual(virtuals),
+		modulesResolver,
+		rollupResolve.nodeResolve({ browser: true }),
+		rollupCommonjs({
+			ignoreTryCatch: false
+		}),
+		rollupBabel.babel(opts.babel),
+		opts.minify ? rollupTerser.terser({
+			numWorkers: MaxWorkers
+		}) : null
+	];
+	if (opts.analyze) plugins.unshift(rollupAnalyze());
+
 	const result = await rollup.rollup({
 		input: bundleName,
 		context: 'window',
-		plugins: [
-			rollupVirtual(virtuals),
-			modulesResolver,
-			rollupResolve.nodeResolve({ browser: true }),
-			rollupCommonjs({
-				ignoreTryCatch: false
-			}),
-			rollupBabel.babel(opts.babel),
-			opts.minify ? rollupTerser.terser({
-				numWorkers: MaxWorkers
-			}) : null
-		]
+		plugins
 	});
 	for (let i = 1; i < result.watchFiles.length; i++) {
 		let item = result.watchFiles[i];

@@ -77,6 +77,11 @@ const parser = dash.createParser({options: [
 		names: ['assets'],
 		type: 'string',
 		help: 'relative path where stylesheets assets are copied, defaults to ./assets'
+	},
+	{
+		names: ['analyze'],
+		type: 'bool',
+		help: 'outputs bundle informations on stderr'
 	}
 ]});
 
