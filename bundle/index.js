@@ -51,7 +51,7 @@ async function bundle(path, opts) {
 		modules: false,
 		// spec: true,
 		useBuiltIns: 'usage',
-		corejs: '3.18'
+		corejs: '3.19'
 	};
 
 	const babelOpts = {
