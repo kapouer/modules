@@ -23,7 +23,8 @@
     "dom"
   ],
   "mocha": {
-    "spec": "test/*.js"
+    "spec": "test/*.js",
+    "exit": true
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
