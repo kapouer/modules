@@ -4,30 +4,36 @@ const Path = require('path');
 const fs = require('fs').promises;
 const mkdirp = require('mkdirp');
 
-const bundledom = require('..');
+const browsers = {
+	old: "ie >= 8,chrome >= 40",
+	recent: "last 1 chrome version"
+};
+process.env.BROWSERSLIST = browsers.old;
+
+const bundle = require('..');
 
 describe("test suite", function () {
 	this.timeout(10000);
+	this.beforeEach(() => {
+		process.env.BROWSERSLIST = browsers.recent;
+	});
 
 	it('should do the most simplest basic js test', async () => {
-		process.env.BROWSERSLIST = "ie >= 8";
-		try {
-			const data = await bundledom('test/fixtures/basic.html', {
-				exclude: [],
-				concatenate: true
-			});
-			data.should.have.property('js');
-			data.js.should.containEql("Array.from([12, 34]).map(function");
-			data.should.have.property('css');
-			data.css.should.containEql("-ms-transform: opacity");
-			data.should.have.property('html');
-		} finally {
-			delete process.env.BROWSERSLIST;
-		}
+		process.env.BROWSERSLIST = browsers.old;
+
+		const data = await bundle('test/fixtures/basic.html', {
+			exclude: [],
+			concatenate: true
+		});
+		data.should.have.property('js');
+		data.js.should.containEql("Array.from([12, 34]).map(function");
+		data.should.have.property('css');
+		data.css.should.containEql("-ms-transform: opacity");
+		data.should.have.property('html');
 	});
 
 	it('should concat js for legacy scripts', async () => {
-		const data = await bundledom('test/fixtures/concat.html', {
+		const data = await bundle('test/fixtures/concat.html', {
 			exclude: [],
 			concatenate: true
 		});
@@ -37,7 +43,7 @@ describe("test suite", function () {
 	});
 
 	it('should work without anything to do', async () => {
-		const data = await bundledom('test/fixtures/none.html', {
+		const data = await bundle('test/fixtures/none.html', {
 			exclude: []
 		});
 		data.should.have.property('js');
@@ -46,7 +52,7 @@ describe("test suite", function () {
 	});
 
 	it('should support es modules', async () => {
-		const data = await bundledom('test/fixtures/esm.html', {
+		const data = await bundle('test/fixtures/esm.html', {
 			exclude: [],
 			concatenate: true
 		});
@@ -58,7 +64,7 @@ describe("test suite", function () {
 	});
 
 	it('should support es modules with browser prefix resolver', async () => {
-		const data = await bundledom('test/fixtures/esm-browser.html', {
+		const data = await bundle('test/fixtures/esm-browser.html', {
 			modulesPrefix: '/',
 			modulesRoot: "test",
 			exclude: [],
@@ -75,69 +81,54 @@ describe("test suite", function () {
 	});
 
 	it('should support legacy-resolved modules', async () => {
-		process.env.BROWSERSLIST = "last 1 chrome version";
-		try {
-			const data = await bundledom('test/fixtures/legacy.html', {
-				root: "test/fixtures",
-				modulesPrefix: '/',
-				modulesRoot: "test",
-				exclude: [],
-				concatenate: true
-			});
-			data.scripts.sort().should.eql([
-				'mod.js',
-				'depmod.js',
-				'node_modules/redirect-exports'
-			].sort());
-			data.should.have.property('js');
-		} finally {
-			delete process.env.BROWSERSLIST;
-		}
+		const data = await bundle('test/fixtures/legacy.html', {
+			root: "test/fixtures",
+			modulesPrefix: '/',
+			modulesRoot: "test",
+			exclude: [],
+			concatenate: true
+		});
+		data.scripts.sort().should.eql([
+			'mod.js',
+			'depmod.js',
+			'node_modules/redirect-exports'
+		].sort());
+		data.should.have.property('js');
 	});
 
 	it('should support legacy-resolved jquery-like with ignored file', async () => {
-		process.env.BROWSERSLIST = "last 1 chrome version";
-		try {
-			const data = await bundledom('test/fixtures/legacy2.html', {
-				root: "test/fixtures",
-				modulesPrefix: '/',
-				modulesRoot: "test",
-				exclude: [],
-				concatenate: true
-			});
-			data.should.have.property('js');
-			data.scripts.should.eql([
-				'fakejquery.js', 'usejquery.js', 'mod.js', 'depmod.js'
-			]);
-		} finally {
-			delete process.env.BROWSERSLIST;
-		}
+		const data = await bundle('test/fixtures/legacy2.html', {
+			root: "test/fixtures",
+			modulesPrefix: '/',
+			modulesRoot: "test",
+			exclude: [],
+			concatenate: true
+		});
+		data.should.have.property('js');
+		data.scripts.should.eql([
+			'fakejquery.js', 'usejquery.js', 'mod.js', 'depmod.js'
+		]);
 	});
 
 	it('should order scripts w.r.t. defer, module, or nothing', async () => {
-		process.env.BROWSERSLIST = "last 1 chrome version";
-		try {
-			const data = await bundledom('test/fixtures/legacy3.html', {
-				root: "test/fixtures",
-				modulesPrefix: '/',
-				modulesRoot: "test",
-				exclude: [],
-				concatenate: true,
-				js: '../bundles/legacy3.js'
-			});
-			data.should.have.property('js');
-			data.scripts.should.eql([
-				'usejquery.js', 'fakejquery.js', 'mod.js', 'depmod.js'
-			]);
-			data.html.should.containEql('../bundles/legacy3.js');
-			data.html.should.containEql('defer=""');
-		} finally {
-			delete process.env.BROWSERSLIST;
-		}
+		const data = await bundle('test/fixtures/legacy3.html', {
+			root: "test/fixtures",
+			modulesPrefix: '/',
+			modulesRoot: "test",
+			exclude: [],
+			concatenate: true,
+			js: '../bundles/legacy3.js'
+		});
+		data.should.have.property('js');
+		data.scripts.should.eql([
+			'usejquery.js', 'fakejquery.js', 'mod.js', 'depmod.js'
+		]);
+		data.html.should.containEql('../bundles/legacy3.js');
+		data.html.should.containEql('defer=""');
 	});
 
 	it('should ignore a script', async () => {
-		const data = await bundledom('test/fixtures/exclude.html', {
+		const data = await bundle('test/fixtures/exclude.html', {
 			ignore: ['b.js']
 		});
 		data.should.have.property('js');
@@ -147,7 +138,7 @@ describe("test suite", function () {
 	});
 
 	it('should ignore a script using a wildcard', async () => {
-		const data = await bundledom('test/fixtures/exclude.html', {
+		const data = await bundle('test/fixtures/exclude.html', {
 			ignore: ['*.js']
 		});
 		data.should.have.property('js');
@@ -158,7 +149,7 @@ describe("test suite", function () {
 
 	it('should bundle html import and run it', async () => {
 		const filepath = 'test/fixtures/import.html';
-		const data = await bundledom(filepath);
+		const data = await bundle(filepath);
 		data.should.have.property('js');
 		data.should.have.property('css');
 		data.should.have.property('html');
@@ -169,7 +160,7 @@ describe("test suite", function () {
 
 	it('should bundle html import in html import and run it', async () => {
 		const filepath = 'test/fixtures/import-in-import.html';
-		const data = await bundledom(filepath);
+		const data = await bundle(filepath);
 		data.should.have.property('js');
 		data.should.have.property('css');
 		data.should.have.property('html');
@@ -180,7 +171,7 @@ describe("test suite", function () {
 
 	it('should bundle imported element with inner imported element and run it', async () => {
 		const filepath = 'test/fixtures/element-in-element.html';
-		const data = await bundledom(filepath);
+		const data = await bundle(filepath);
 		data.should.have.property('js');
 		data.should.have.property('css');
 		data.should.have.property('html');
@@ -198,7 +189,7 @@ describe("test suite", function () {
 			copyOver('test/fixtures/sub/sub.css', 'test/bundles/sub.css')
 		]);
 
-		const data = await bundledom('test/fixtures/import-sub.html', {
+		const data = await bundle('test/fixtures/import-sub.html', {
 			root: 'test/bundles',
 			html: 'import-sub.html',
 			js: 'import-sub.js'
@@ -210,7 +201,7 @@ describe("test suite", function () {
 	});
 
 	it('should not bundle remotes', async () => {
-		const data = await bundledom('test/fixtures/remote.html', {
+		const data = await bundle('test/fixtures/remote.html', {
 			root: 'test/bundles',
 			html: 'remote.html',
 			css: 'remote.css'
@@ -222,7 +213,7 @@ describe("test suite", function () {
 
 	it('should bundle remote stylesheet', async function () {
 		this.timeout(10000);
-		const data = await bundledom('test/fixtures/remote.html', {
+		const data = await bundle('test/fixtures/remote.html', {
 			root: 'test/bundles',
 			html: 'remote.html',
 			css: 'remote.css',
@@ -235,8 +226,9 @@ describe("test suite", function () {
 	});
 
 	it('should bundle stylesheet from a module and url to non css files alone', async function () {
+		process.env.BROWSERSLIST = browsers.old;
 		this.timeout(10000);
-		const data = await bundledom('test/fixtures/style.html', {
+		const data = await bundle('test/fixtures/style.html', {
 			concatenate: true,
 			modulesPrefix: "/",
 			modulesRoot: "test"
@@ -248,8 +240,9 @@ describe("test suite", function () {
 	});
 
 	it('should bundle stylesheet from a module and copy assets to dir', async function () {
+		process.env.BROWSERSLIST = browsers.old;
 		this.timeout(10000);
-		const data = await bundledom('test/fixtures/style.html', {
+		const data = await bundle('test/fixtures/style.html', {
 			modulesPrefix: "/",
 			modulesRoot: "test",
 			assets: "assets",
@@ -264,7 +257,7 @@ describe("test suite", function () {
 	});
 
 	it('should import jquery-like bundle with side effects', async () => {
-		const data = await bundledom('test/fixtures/fakejquery.html', {
+		const data = await bundle('test/fixtures/fakejquery.html', {
 			concatenate: true
 		});
 		data.js.should.containEql("window.$ = jQuery");
@@ -272,7 +265,7 @@ describe("test suite", function () {
 	});
 
 	it('should resolve org modules', async () => {
-		const data = await bundledom('test/fixtures/orgmodule.html', {
+		const data = await bundle('test/fixtures/orgmodule.html', {
 			concatenate: true,
 			modulesRoot: "test"
 		});
@@ -283,7 +276,7 @@ describe("test suite", function () {
 		this.timeout(10000);
 		await copyOver('test/fixtures/usejquery.js', 'test/bundles/usejquery.js');
 
-		const data = await bundledom('test/fixtures/remote.html', {
+		const data = await bundle('test/fixtures/remote.html', {
 			root: 'test/bundles',
 			html: 'remote.html',
 			js: 'remote.js',
