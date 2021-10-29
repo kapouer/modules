@@ -295,6 +295,21 @@ describe("test suite", function () {
 		str.should.containEql("jQuery");
 	});
 
+	it('should bundle dynamic imports', async () => {
+		await copyOver('test/fixtures/dyna.js', 'test/bundles/dyna.js');
+		await copyOver('test/fixtures/dynb.js', 'test/bundles/dynb.js');
+
+		const data = await bundle('test/fixtures/dyn.html', {
+			root: 'test/bundles',
+			html: 'dyn.html',
+			js: 'dyn.js'
+		});
+		data.should.have.property('js');
+
+		const str = (await fs.readFile('test/bundles/dyn.js')).toString();
+		str.should.containEql("window.toto");
+	});
+
 });
 
 async function copyOver(from, to) {
