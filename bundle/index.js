@@ -370,6 +370,7 @@ async function processScripts(doc, opts, data) {
 		if (!data.scripts.includes(rel)) data.scripts.push(rel);
 	}
 	const { output } = await result.generate({
+		inlineDynamicImports: true,
 		format: 'iife'
 	});
 	const codeList = [];
