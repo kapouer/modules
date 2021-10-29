@@ -1,4 +1,4 @@
-const { dirname, relative, join, resolve } = require("upath");
+const { dirname, relative, join, resolve, normalize } = require("upath");
 const fs = require("fs");
 const nodeResolve = require("resolve");
 const crypto = require("crypto");
@@ -92,7 +92,7 @@ class ModuleServer {
 		// Builtin modules resolve to strings like "fs". Try again with
 		// slash which makes it possible to locally install an equivalent.
 		if (resolved.indexOf("/") == -1) {
-			try { resolved = this.resolveMod(path + "/", basePath); }
+			try { resolved = this.resolveMod(join(path, "/"), basePath); }
 			catch (e) { return { error: e.toString() }; }
 		}
 
@@ -224,10 +224,10 @@ class ModuleServer {
 		return pkg;
 	}
 	resolveMod(path, base) {
-		return nodeResolve.sync(path, {
+		return normalize(nodeResolve.sync(path, {
 			basedir: base,
 			packageFilter: (pkg) => this.packageFilter(pkg)
-		});
+		}));
 	}
 }
 module.exports = ModuleServer;
