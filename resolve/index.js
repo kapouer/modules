@@ -5,6 +5,7 @@ const PKGKEY = "@webmodule/resolve";
 module.exports = class Resolver {
 	constructor({ prefix = "/", root = ".", modules = {} }) {
 		this.modules = modules;
+		this.parent = root;
 		this.root = upath.resolve(root, "node_modules");
 		this.prefix = prefix + "node_modules/";
 	}
@@ -15,6 +16,9 @@ module.exports = class Resolver {
 		url = url.substring(prefix.length);
 		const [moduleName, relUrl] = urlParts(url);
 		if (!moduleName) return ret;
+		if (!modules["."]) {
+			modules["."] = await pkgExports(this.parent, modules);
+		}
 		let mod = modules[moduleName];
 		const dir = upath.join(root, moduleName);
 		if (!mod) {
