@@ -196,7 +196,7 @@ class ModuleServer {
 			patches.push({
 				from: ast.start,
 				to: ast.start,
-				text: 'const module = {exports: {}};const exports = module.exports'
+				text: 'const module = {exports: {}};let exports = module.exports'
 					+ (code.charAt(ast.start) == ";" ? "" : ";")
 			});
 			patches.push({

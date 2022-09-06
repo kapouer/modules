@@ -61,7 +61,7 @@ describe("test suite", function () {
 		});
 		assert.strictEqual(
 			res2.body,
-			'const module = {exports: {}};const exports = module.exports;exports.value = 1;\n;export default module.exports'
+			'const module = {exports: {}};let exports = module.exports;exports.value = 1;\n;export default module.exports'
 		);
 	});
 
@@ -86,7 +86,7 @@ describe("test suite", function () {
 				accept: "*/*"
 			}
 		});
-		assert.ok(res.body.startsWith("const module = {exports: {}};const exports = module.exports;"));
+		assert.ok(res.body.startsWith("const module = {exports: {}};let exports = module.exports;"));
 	});
 
 	it('should not reexport global module', async () => {
@@ -96,7 +96,7 @@ describe("test suite", function () {
 				accept: "*/*"
 			}
 		});
-		assert.ok(!res.body.startsWith("const module = {exports: {}};const exports = module.exports;"));
+		assert.ok(!res.body.startsWith("const module = {exports: {}};let exports = module.exports;"));
 	});
 
 	it('should leave file untouched because referer is not js', async () => {
@@ -106,7 +106,7 @@ describe("test suite", function () {
 				accept: "*/*"
 			}
 		});
-		assert.ok(!res.body.startsWith("const module = {exports: {}};const exports = module.exports;"));
+		assert.ok(!res.body.startsWith("const module = {exports: {}};let exports = module.exports;"));
 	});
 
 	it('should redirect in subdir without loop', async () => {
