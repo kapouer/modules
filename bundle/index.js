@@ -12,7 +12,7 @@ const autoprefixer = require('autoprefixer');
 const presetEnv = require.resolve('@babel/preset-env');
 const rollup = require('rollup');
 const rollupBabel = require('@rollup/plugin-babel');
-const rollupTerser = require('rollup-plugin-terser');
+const rollupTerser = require('@rollup/plugin-terser');
 const rollupVirtual = require('@rollup/plugin-virtual');
 const rollupResolve = require('@rollup/plugin-node-resolve');
 const rollupCommonjs = require('@rollup/plugin-commonjs');
@@ -354,8 +354,8 @@ async function processScripts(doc, opts, data) {
 			ignoreTryCatch: false
 		}),
 		rollupBabel.babel(opts.babel),
-		opts.minify ? rollupTerser.terser({
-			numWorkers: MaxWorkers
+		opts.minify ? rollupTerser({
+			maxWorkers: MaxWorkers
 		}) : null
 	];
 	if (opts.analyze) plugins.unshift(rollupAnalyze());
