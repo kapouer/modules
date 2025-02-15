@@ -4,7 +4,8 @@ const postcss = require('postcss');
 const postcssUrl = require('postcss-url');
 const postcssImport = require('postcss-import');
 const postcssFlexBugs = require('postcss-flexbugs-fixes');
-const csso = require('postcss-csso');
+const cssnano = require('cssnano');
+const litePreset = require('cssnano-preset-lite');
 const reporter = require('postcss-reporter');
 const autoprefixer = require('autoprefixer');
 
@@ -487,8 +488,8 @@ async function processStylesheets(doc, opts, data) {
 		autoprefixer(autoprefixerOpts)
 	];
 	if (opts.minify) {
-		plugins.push(csso({
-			comments: false
+		plugins.push(cssnano({
+			preset: litePreset({ discardComments: true })
 		}));
 	}
 	plugins.push(reporter);

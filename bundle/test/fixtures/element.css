@@ -1,3 +1,11 @@
 .element {
 	background: red;
 }
+@container (max-width: 200px) {
+	.db-block--coachvision .tsLabel {
+			display: none;
+	}
+	.db-block--coachvision .tsSelection {
+			max-width: unset;
+	}
+}

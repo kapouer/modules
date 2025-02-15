@@ -250,7 +250,7 @@ describe("test suite", function () {
 		});
 		data.assets.should.eql(["../node_modules/style/fonts/test.ttf"]);
 		data.stylesheets.should.eql(['node_modules/style']);
-		data.css.should.containEql("src:url(../../assets/68a581f6.ttf)");
+		data.css.should.containEql("src:url('../../assets/68a581f6.ttf')");
 		data.css.should.containEql("-webkit-animation-duration:12ms");
 		await fs.stat("test/bundles/assets/68a581f6.ttf");
 	});
