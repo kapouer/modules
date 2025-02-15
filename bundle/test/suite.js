@@ -2,7 +2,6 @@ const should = require('should');
 const jsdom = require('jsdom');
 const Path = require('path');
 const fs = require('fs').promises;
-const mkdirp = require('mkdirp');
 
 const browsers = {
 	old: "ie >= 8,chrome >= 40",
@@ -76,7 +75,7 @@ describe("test suite", function () {
 		]);
 		data.should.have.property('js');
 		data.js.trim().should.startWith('(function (');
-		data.js.includes('var test = 1;').should.be.true();
+		data.js.includes('.test = 1;').should.be.true();
 		data.should.have.property('html');
 	});
 
@@ -308,7 +307,7 @@ describe("test suite", function () {
 async function copyOver(from, to) {
 	try { await fs.unlink(to); } catch(ex) { /* pass */ }
 	const data = await fs.readFile(from);
-	await mkdirp(Path.dirname(to));
+	await fs.mkdir(Path.dirname(to), { recursive: true });
 	await fs.writeFile(to, data);
 }
 

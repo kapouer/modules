@@ -19,14 +19,17 @@ const rollupAnalyze = require('rollup-plugin-analyzer');
 const Resolver = require('@webmodule/resolve');
 
 const JSDOM = require('jsdom').JSDOM;
-const mkdirp = require('mkdirp');
 const MaxWorkers = Math.min(require('os').cpus().length - 1, 4);
 
 const fs = require('fs').promises;
 const Path = require('upath');
-const got = require('got');
 
-const minimatch = require("minimatch");
+async function got(...args) {
+	const { got } = await import("got");
+	return got(...args);
+}
+
+const { minimatch } = require("minimatch");
 
 const coreJsRe = /\/core-js\//;
 
@@ -635,7 +638,7 @@ async function readFile(path) {
 }
 
 async function writeFile(path, buf) {
-	await mkdirp(Path.dirname(path));
+	await fs.mkdir(Path.dirname(path), { recursive: true });
 	await fs.writeFile(path, buf);
 }
 
