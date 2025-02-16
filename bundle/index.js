@@ -62,10 +62,7 @@ async function bundle(path, opts) {
 		presets: [
 			[presetEnv, babelPresetOpts]
 		],
-		plugins: [
-			"@babel/plugin-proposal-class-properties",
-			"@babel/plugin-proposal-optional-chaining"
-		],
+		plugins: [],
 		compact: false,
 		babelHelpers: 'bundled',
 		comments: minify === false,
